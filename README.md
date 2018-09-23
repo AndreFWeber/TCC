@@ -1,8 +1,12 @@
 # TCC
 Trabalho de Conclusão de Curso - Engenharia de Telecomunicações  
+
 INSTITUTO FEDERAL DE SANTA CATARINA
+
 ANDRÉ FELIPPE WEBER
+
 Orientador: Prof. Tiago Semprebom, Dr. Eng.
+
 Coorientador: Prof. Eraldo Silveira e Silva, Dr. Eng.
 
 Provimento de QoS para Aplicações em Redes de Sensores sem Fios Baseadas em Redes Definidas por Software
