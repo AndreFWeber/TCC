@@ -1,0 +1,159 @@
+% ------------------------------------------------------------------------
+% ------------------------------------------------------------------------
+% abnTeX2: Modelo de Trabalho Academico (tese de doutorado, dissertacao de
+% mestrado e trabalhos monograficos em geral) em conformidade com 
+% ABNT NBR 14724:2011: Informacao e documentacao - Trabalhos academicos -
+% Apresentacao
+%
+% Adaptado por Emerson Ribeiro de Mello (2017-08-23)
+% baseado no modelo "Template para elaboração de trabalho acadêmico - versão setembro/2016" fornecido pela Biblioteca do IFSC - http://www.ifsc.edu.br/menu-colecao-abnt (acessado em 2017-08-23)
+% ------------------------------------------------------------------------
+% ------------------------------------------------------------------------
+\documentclass[
+	% -- opções da classe memoir --
+	10pt,				% tamanho da fonte
+	openright,			% capítulos começam em pág ímpar (insere página vazia caso preciso)
+	twoside,			% para impressão em verso e anverso. Oposto a oneside
+	a4paper,			% tamanho do papel. 
+	% -- opções da classe abntex2 --
+	chapter=TITLE,		% títulos de capítulos convertidos em letras maiúsculas
+	%section=TITLE,		% títulos de seções convertidos em letras maiúsculas
+	%subsection=TITLE,	% títulos de subseções convertidos em letras maiúsculas
+	%subsubsection=TITLE,% títulos de subsubseções convertidos em letras maiúsculas
+	% -- opções do pacote babel --
+	english,			% idioma adicional para hifenização
+%	french,				% idioma adicional para hifenização
+%	spanish,			% idioma adicional para hifenização
+	brazil				% o último idioma é o principal do documento
+	]{abntex2}
+
+%	Todas as indicações de pacotes e configurações estão no arquivo de estilo
+%  chamado estilo-monografia-ifsc.sty.
+\usepackage{estilo-monografia-ifsc}	
+\usepackage{xcolor}
+\newcommand\adESS[1]{\textcolor{red}{#1}}
+%---------------------------------------------------------------------%
+%---------------------------------------------------------------------%
+% Informações de dados para CAPA e FOLHA DE ROSTO
+%---------------------------------------------------------------------%
+%---------------------------------------------------------------------%
+\titulo{Provimento de QoS para Aplicações em Redes de Sensores\\ sem Fios Baseadas em Redes Definidas por Software}
+\autor{André Felippe Weber}
+\local{São José - SC}
+\data{agosto/2017}
+\orientador{Prof. Tiago Semprebom, Dr. Eng.}
+\coorientador{Prof. Eraldo Silveira e Silva, Dr. Eng.}
+\instituicao{%
+  Instituto Federal de Santa Catarina -- IFSC
+  \par
+  Campus São José
+  \par
+  Engenharia de Telecomunicações}
+\tipotrabalho{Monografia (Graduação)}
+
+% O preambulo deve conter o tipo do trabalho, o objetivo, 
+% o nome da instituição e a área de concentração 
+\preambulo{Trabalho de conclusão de curso apresentado à Coordenadoria do Curso de Engenharia de Telecomunicações do campus São José do Instituto Federal de Santa Catarina para a obtenção do diploma de Engenheiro de Telecomunicações.}
+%---------------------------------------------------------------------%
+\textoaprovacao{Este trabalho foi julgado adequado para obtenção do título de Engenheiro de Telecomunicações, pelo Instituto Federal de Educação, Ciência e Tecnologia de Santa Catarina, e aprovado na sua forma final pela comissão avaliadora abaixo indicada.}
+
+
+
+
+
+%---------------------------------------------------------------------%
+% Início do documento
+%---------------------------------------------------------------------%
+
+
+\begin{document}
+% Seleciona o idioma do documento (conforme pacotes do babel)
+\selectlanguage{brazil}
+% Retira espaço extra obsoleto entre as frases.
+\frenchspacing 
+
+
+% ----------------------------------------------------------
+% ELEMENTOS PRÉ-TEXTUAIS
+% ----------------------------------------------------------
+% \pretextual
+
+\imprimircapa
+% Folha de rosto - (o * indica que haverá a ficha bibliográfica)
+\imprimirfolhaderosto*
+% ---
+
+%---------------------------------------------------------------------%
+% RESUMOS
+%---------------------------------------------------------------------%
+% resumo em português
+\setlength{\absparsep}{18pt} % ajusta o espaçamento dos parágrafos do resumo
+\begin{resumo}
+ 
+As Redes de Sensores sem Fios (RSSFs) tornaram-se um recurso valioso no contexto da Internet das Coisas (IoT). Diversos domínios de aplicação como militar, hospitalar, de segurança e de sistemas de controle utilizam dados escalares e multimídia, produzidos por inúmeros módulos espalhados em uma região. As limitações de bateria, poder de processamento e memória, em conjunto com a heterogeneidade dos módulos utilizados, resultam em um complexo processo de gerenciamento da rede. Como consequência, atender aos requisitos de QoS (\textit{Quality of Service}), aliados ao baixo consumo energético e roteamento eficiente de dados nas RSSFs torna-se um desafio. O conceito de Redes Definidas por Software (SDN), possibilita minimizar a complexidade de gerenciamento dessas redes ao centralizar as decisões de roteamento e administração da RSSF em um controlador separa, fisicamente, da rede. Deste modo, este trabalho propõe implementar uma RSSF baseada no conceito de SDN, que utiliza a plataforma SDN-WISE para prover QoS, através da alocação de largura de banda e economia energética dos módulos, às aplicações que executam sobre a RSSF.
+
+\textbf{Palavras-chave}: Redes de Sensores Multimídia sem Fios, roteamento, QoS, IoT, SDN.
+
+\end{resumo}
+
+%---------------------------------------------------------------------%
+% inserir lista de ilustrações, tabelas, listagem de códigos, abreviaturas, símbolos
+%---------------------------------------------------------------------%
+\pdfbookmark[0]{\listfigurename}{lof}
+\listoffigures*
+\cleardoublepage
+% inserir lista de tabelas
+%\pdfbookmark[0]{\listtablename}{lot}
+%\listoftables*
+%\cleardoublepage
+
+
+% inserir lista de abreviaturas e siglas
+\pdfbookmark[0]{Lista de abreviaturas e siglas}{loa}
+\include{abreviaturas}
+\cleardoublepage
+
+%---------------------------------------------------------------------%
+
+%---------------------------------------------------------------------%
+% inserir o sumario
+%---------------------------------------------------------------------%
+\pdfbookmark[0]{\contentsname}{toc}
+\tableofcontents*
+\cleardoublepage
+
+% ----------------------------------------------------------
+% ELEMENTOS TEXTUAIS
+% ----------------------------------------------------------
+\textual
+
+
+% ----------------------------------------------------------
+% Inclusão dos capítulos que estão em outros arquivos .tex
+% ----------------------------------------------------------
+\include{cap1} % introdução
+\include{cap2}
+\include{cap3}
+\cleardoublepage
+
+
+% ----------------------------------------------------------
+% ELEMENTOS PÓS-TEXTUAIS
+% ----------------------------------------------------------
+\postextual
+% ----------------------------------------------------------
+
+% ----------------------------------------------------------
+% Referências bibliográficas
+% ----------------------------------------------------------
+\bibliography{referencias}
+
+
+%---------------------------------------------------------------------
+% INDICE REMISSIVO
+%---------------------------------------------------------------------
+\phantompart
+\printindex
+%---------------------------------------------------------------------
+
+\end{document}
