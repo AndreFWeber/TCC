@@ -184,10 +184,12 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
      */
     @Override
     public void update(Observable o, Object arg) {
-        if (o.equals(lower)) {
+       if (o.equals(lower)) {
             try {
                 bQ.put(new NetworkPacket((byte[]) arg));
             } catch (InterruptedException ex) {
+        System.out.println("OBSERVER AQUI");
+ 
                 log(Level.SEVERE, ex.getMessage());
             }
         } else if (o.equals(networkGraph)) {

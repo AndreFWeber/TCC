@@ -52,7 +52,7 @@
 /*----------------------------------------------------------------------------*/
   void 
   print_packet_uart(packet_t* p)
-  {
+  {/*
     uint16_t i = 0;
     putchar(122);
     uint8_t* tmp = (uint8_t*)p;
@@ -60,7 +60,37 @@
       putchar(tmp[i]);
     }
     putchar(126);
-    putchar('\n');
+    putchar('\n');*/
+
+
+    uint16_t i = 0;
+    printf("%d %d ", p->header.len, p->header.net);
+    for (i=0;i<ADDRESS_LENGTH-1;++i){
+      printf("%d.",p->header.dst.u8[i]);
+    }
+    printf("%d ",p->header.dst.u8[i]);
+    for (i=0;i<ADDRESS_LENGTH-1;++i){
+      printf("%d.",p->header.src.u8[i]);
+    }
+    printf("%d ",p->header.src.u8[i]);
+
+
+
+    //print_address(&(p->header.dst));
+    //print_address(&(p->header.src));
+    printf("%d %d ", p->header.typ, p->header.ttl);
+    //print_address(&(p->header.nxh));
+    for (i=0;i<ADDRESS_LENGTH-1;++i){
+      printf("%d.",p->header.nxh.u8[i]);
+    }
+    printf("%d ",p->header.nxh.u8[i]);
+
+
+	for (i=0; i < (p->header.len - PLD_INDEX); ++i){
+      printf("%d ",get_payload_at(p,i));
+    }
+
+	printf("\n");
     packet_deallocate(p);
   }
 /*----------------------------------------------------------------------------*/
@@ -68,7 +98,7 @@
   print_packet(packet_t* p)
   {
     uint16_t i = 0;
-    PRINTF("%d %d ", p->header.net, p->header.len);
+    PRINTF("%d %d ", p->header.len, p->header.net);
     print_address(&(p->header.dst));
     print_address(&(p->header.src));
     PRINTF("%d %d ", p->header.typ, p->header.ttl);
@@ -110,6 +140,9 @@
         set_payload_at(p, i, payload[i]);  
       }
     }
+
+	print_packet(p);
+
     return p;
   }
 /*----------------------------------------------------------------------------*/

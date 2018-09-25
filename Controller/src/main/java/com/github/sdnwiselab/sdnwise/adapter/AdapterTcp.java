@@ -34,6 +34,9 @@ import java.util.Observable;
 import java.util.Observer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Iterator;
 
 /**
  * The adapter class for UDP port communication. Configuration data are passed
@@ -179,9 +182,7 @@ public class AdapterTcp extends Adapter {
             Socket clientSocket = null;
             while (!isStopped()) {
                 try {
-System.out.println("WILL ACCEPT");                               
                     clientSocket = this.serverSocket.accept();
-  System.out.println("ACCEPTED");
                     clientSockets.add(clientSocket);
                 } catch (IOException e) {
                     if (isStopped()) {
@@ -229,9 +230,56 @@ System.out.println("WILL ACCEPT");
         private class WorkerRunnable extends Observable implements Runnable {
 
             private Socket clientSocket = null;
+            private int start = 0;
+
+            private boolean endflag = false;
+            //private byte[] data = new byte[1024]; //MAX_PACKET_LENGTH = 116; Porem o mote pode jogar msgs maiores durante a inicializacao...1024 me parece seguro.
+            //ArrayList data = new ArrayList();
+            List<Byte> dataASCII = new ArrayList<Byte>();
+            List<Byte> data = new ArrayList<Byte>();
 
             WorkerRunnable(Socket clientSocket) {
                 this.clientSocket = clientSocket;
+            }
+            
+            private void ASCII_2_Bytes() {
+                Iterator iter1 = dataASCII.iterator();
+                List<Integer> data_2_byte = new ArrayList<Integer>();
+
+                while(iter1.hasNext()){
+                    int next = (Byte)iter1.next() & 0xFF;
+
+                   // System.out.println("NEXT: " + next);
+                    
+                    if(next == 32){ //ASCII space separator
+                        int len = data_2_byte.size();
+                        int val = 0;
+                        Iterator iter2 = data_2_byte.iterator();   
+                        boolean byteZero = false; //Nao perde o(s) primeiro(s) byte se eles forem zero
+                        while(iter2.hasNext()){
+                            int value = ((Integer)iter2.next()-48);
+                            if(value != 0 || byteZero) {
+                                byteZero = true;
+                                val += value * Math.pow(10, --len); //48 base 10 = 0 ASCII
+                            }
+                            if(!byteZero){
+                                //System.out.println("BYTE " + ((byte)val & 0xFF) + " ");
+                                data.add((byte)val);
+                                if(--len == 0)
+                                    break;
+                            }
+                        }             
+                        if(data_2_byte.get(0)-48==0 && data_2_byte.size()==1){
+                            data_2_byte.clear();
+                        } else {
+                            data.add((byte)val);
+                            data_2_byte.clear();
+                            // System.out.println("BYTE " + ((byte)val & 0xFF) +"\n\n");
+                        }
+                    } else {
+                        data_2_byte.add(next);
+                    }
+                }
             }
 
             @Override
@@ -240,14 +288,63 @@ System.out.println("WILL ACCEPT");
                     InputStream in = clientSocket.getInputStream();
                     DataInputStream dis = new DataInputStream(in);
                     while (true) {
-                        int len = dis.readByte() & 0xFF;
-                        byte[] data = new byte[len];
-                        data[0] = (byte) len;
-                        if (len > 0) {
-                            dis.readFully(data, 1, len - 1);
+                        byte bt = dis.readByte();
+                       
+                        if((bt & 0xFF) == 192){
+                            if(endflag){
+                                                                /*
+                                Ignora as 5 MSGs de inicializacao do mote:
+                                Rime started with address 1.0
+                                MAC 01:00:00:00:00:00:00:00 Contiki-2.6-2450-geaa8760 started. Node id is set to 1.
+                                nullsec CSMA ContikiMAC, channel check rate 8 Hz, radio channel 26
+                                uIP started with IP address 172.16.1.0
+                                Starting 'Main Process' 'RF Unicast Send Process' 'RF Broadcast Send Process' 'Timer Process' 'Beacon Timer Process' 'Report Timer Process' 'Packet Handler Process' 'Data Timer Process' 'TCP echo process'
+                                */
+                                if(start++ < 5){
+                                    dataASCII.clear();
+                                    continue;
+                                }
+                                System.out.println("BUFFER DONE");
+                                    ASCII_2_Bytes();
+                                        Iterator iter1 = data.iterator();
+                                        while(iter1.hasNext()){
+                                                System.out.printf("0x%02X ",iter1.next());
+                                        }
+                                        System.out.printf("\n\n\n");
+                                        dataASCII.clear();
+                            } else
+                                endflag = true;
+                            continue;            
                         }
-                        setChanged();
-                        notifyObservers(data);
+                        if((bt & 0xFF) == 13 || (bt & 0xFF) == 46)
+                            continue;
+                      
+                        endflag = false;
+                        dataASCII.add(bt);
+                        //System.out.println("ADD BT");
+                        /*
+                        int len = teste & 0xFF;
+                        //System.out.printf("VAI LER 0x%02X \n", teste );
+                        
+                        if(len == 0 && !start)
+                            start=true;                        
+                        if(!start)
+                        //    continue;
+                        //System.out.println("O bicho vai pegar");
+
+                        
+                        if (len > 0) {                           
+                            byte[] data = new byte[len];
+                            data[0] = (byte) len;
+                            dis.readFully(data, 1, len - 1);                        
+                            notifyObservers(data);
+                            for (int i = 0; i < len; i++) {
+                                System.out.printf("0x%02X", data[i]);
+                            }
+                            System.out.printf("\n\n\n");
+
+                        }                
+*/
                     }
                 } catch (IOException ex) {
                     Logger.getLogger(

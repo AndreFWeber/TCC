@@ -62,8 +62,8 @@
   } packet_info_t;
 
   typedef struct __attribute__((__packed__)) packet_header {
-    uint8_t net;
     uint8_t len;
+    uint8_t net;
     address_t dst;
     address_t src;
     packet_type_t typ;

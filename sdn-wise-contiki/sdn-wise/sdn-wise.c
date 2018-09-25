@@ -168,6 +168,8 @@ uip_ip4addr_t ip4addr;
   int
   uart_rx_callback(unsigned char c)
   {
+	PRINTF(">>>>>>>>>>>>>>>>>>>>>>>>>>SERIAL");
+
     uart_buffer[uart_buffer_index] = c;
     if (uart_buffer_index == LEN_INDEX){
       uart_buffer_expected = c;
@@ -207,10 +209,11 @@ uip_ip4addr_t ip4addr;
     address_list_init();
     leds_init();
 
-#if SINK
-    print_packet_uart(create_reg_proxy());
-#endif    
 
+#if SINK
+PRINTF("<<<<<<<<<<REG");
+	print_packet_uart(create_reg_proxy());
+#endif    
     while(1) {
       PROCESS_WAIT_EVENT();
       switch(ev) {
@@ -220,8 +223,8 @@ uip_ip4addr_t ip4addr;
       // test_neighbor_table();
       // test_packet_buffer();
       // test_address_list();
-        print_flowtable();
-        print_node_conf();
+//        print_flowtable();
+//        print_node_conf();
         break;
 
         case UART_RECEIVE_EVENT:
@@ -423,7 +426,7 @@ static int
 input(struct tcp_socket *s, void *ptr,
       const uint8_t *inputptr, int inputdatalen)
 {
-  printf("input %d bytes '%s'\n", inputdatalen, inputptr);
+  //printf("input %d bytes '%s'\n", inputdatalen, inputptr);
 return 0;
 }
 /*---------------------------------------------------------------------------*/
@@ -431,21 +434,19 @@ static void
 event(struct tcp_socket *s, void *ptr,
       tcp_socket_event_t ev)
 {
-  printf("event %d\n", ev);
+  //printf("event %d\n", ev);
 }
 /*----------------------------------------------------------------------------*/
 PROCESS_THREAD(tcp_server_process, ev, data)
 {
   PROCESS_BEGIN();
-        PRINTF(">>>>>>>>>>>>>process ");
+
 
 #if SINK
-        PRINTF("<<<<<<<<<<<<<<SINK \n");
-
   tcp_socket_register(&socket, NULL, inputbuf, sizeof(inputbuf), outputbuf, sizeof(outputbuf), input, event);
   //tcp_socket_listen(&socket, SERVER_PORT);
   uip_ipaddr(&ip4addr, 127, 0, 0, 0);
-  tcp_socket_connect(&socket, &ip4addr, 9991 );
+  tcp_socket_connect(&socket, &ip4addr, 8888 );
 #endif
 
   PROCESS_END();
