@@ -89,22 +89,25 @@ public class SdnWise {
         
         // We wait for the network to start 
         try {
-            Thread.sleep(60000);
+            Thread.sleep(40000);
         
             // Then we query the nodes
+            boolean source = true; //false = source 0
+            int i = 0; 
             while (true){    
-                for (int i = 1; i < 5; i++){
-                    System.out.println("- quering node " + i);
+                //for (int i = 1; i <= 5; i++){
+                    //System.out.println("_______________________________quering node " + i);
                     int netId = 1;
-                    NodeAddress dst = new NodeAddress(i);
-                    NodeAddress src = new NodeAddress(1);
                     
+                    NodeAddress dst = new NodeAddress((source?9:18));
+                    source=!source;
+                    NodeAddress src = new NodeAddress(1);
                     DataPacket p = new DataPacket(netId,src,dst);
                     p.setNxhop(src);
                     p.setPayload("Hello World!".getBytes(Charset.forName("UTF-8")));
                     controller.sendNetworkPacket(p);
                     Thread.sleep(2000);
-                }
+                //}
             }
         
         } catch (InterruptedException ex) {

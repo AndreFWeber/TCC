@@ -107,4 +107,9 @@ public class ControllerDijkstra extends Controller {
     public void setupNetwork() {
 
     }
+
+    @Override
+    public void MultiplePath_manageRoutingRequest(NetworkPacket data) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
 }

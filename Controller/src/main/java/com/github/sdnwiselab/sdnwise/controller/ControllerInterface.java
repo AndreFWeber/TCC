@@ -142,7 +142,7 @@ public interface ControllerInterface {
      * @param data NetworkPacket will be managed.
      */
     void manageRoutingRequest(NetworkPacket data);
-
+    void MultiplePath_manageRoutingRequest(NetworkPacket data);
     /**
      * This method removes an address in the list of addresses accepted by the
      * node.

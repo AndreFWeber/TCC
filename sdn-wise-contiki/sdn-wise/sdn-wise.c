@@ -149,7 +149,8 @@ uip_ip4addr_t ip4addr;
   unicast_rx_callback(struct unicast_conn *c, const linkaddr_t *from)
   {
     packet_t* p = get_packet_from_array((uint8_t *)packetbuf_dataptr());
-    if (p != NULL){
+  
+   if (p != NULL){
       p->info.rssi = get_packet_rssi(packetbuf_attr(PACKETBUF_ATTR_RSSI));
       process_post(&main_proc, RF_U_RECEIVE_EVENT, (process_data_t)p);
     }
@@ -158,7 +159,18 @@ uip_ip4addr_t ip4addr;
   static void
   broadcast_rx_callback(struct broadcast_conn *c, const linkaddr_t *from)
   {
+    printf("chegou %s do %d por broadcast\n", (char *)packetbuf_dataptr(), from->u8[0]);
+
     packet_t* p = get_packet_from_array((uint8_t *)packetbuf_dataptr());
+#if SINK
+	printf("<<<<<<<<<<<<");
+	print_packet(p);
+	printf(">>>>>>>>>>>>");
+#endif
+
+	
+
+
     if (p != NULL){
       p->info.rssi = get_packet_rssi(packetbuf_attr(PACKETBUF_ATTR_RSSI));
       process_post(&main_proc, RF_B_RECEIVE_EVENT, (process_data_t)p);
@@ -168,7 +180,7 @@ uip_ip4addr_t ip4addr;
   int
   uart_rx_callback(unsigned char c)
   {
-	PRINTF(">>>>>>>>>>>>>>>>>>>>>>>>>>SERIAL");
+
 
     uart_buffer[uart_buffer_index] = c;
     if (uart_buffer_index == LEN_INDEX){
@@ -218,13 +230,13 @@ PRINTF("<<<<<<<<<<REG");
       PROCESS_WAIT_EVENT();
       switch(ev) {
         case TIMER_EVENT:
-      // test_handle_open_path();
-      // test_flowtable();
-      // test_neighbor_table();
-      // test_packet_buffer();
-      // test_address_list();
-//        print_flowtable();
-//        print_node_conf();
+        //test_handle_open_path();
+        //test_flowtable();
+        //test_neighbor_table();
+        //test_packet_buffer();
+        //test_address_list();
+        //print_flowtable();
+        //print_node_conf();
         break;
 
         case UART_RECEIVE_EVENT:
@@ -416,8 +428,7 @@ PROCESS_THREAD(beacon_timer_proc, ev, data) {
       PRINTF("\n");
       int packet_type = handle_packet(p);
       if(packet_type==2)
-	PRINTF("ENVIA PRO CONTROLLER CUZAO ");
-
+          print_packet_uart(p);
     }
     PROCESS_END();
   }

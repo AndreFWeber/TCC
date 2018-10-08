@@ -17,6 +17,7 @@
 package com.github.sdnwiselab.sdnwise.controller;
 
 import com.github.sdnwiselab.sdnwise.adapter.Adapter;
+import com.github.sdnwiselab.sdnwise.adapter.AdapterTcp;
 import com.github.sdnwiselab.sdnwise.flowtable.FlowTableEntry;
 import com.github.sdnwiselab.sdnwise.function.FunctionInterface;
 import com.github.sdnwiselab.sdnwise.packet.ConfigAcceptedIdPacket;
@@ -33,6 +34,7 @@ import com.github.sdnwiselab.sdnwise.packet.OpenPathPacket;
 import com.github.sdnwiselab.sdnwise.packet.ReportPacket;
 import com.github.sdnwiselab.sdnwise.packet.ResponsePacket;
 import com.github.sdnwiselab.sdnwise.topology.NetworkGraph;
+import com.github.sdnwiselab.sdnwise.topology.VisualNetworkGraph;
 import com.github.sdnwiselab.sdnwise.util.NodeAddress;
 import java.io.File;
 import java.io.IOException;
@@ -45,6 +47,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.jodah.expiringmap.ExpiringMap;
+import java.lang.*;
 
 /**
  * This class holds a representation of the sensor network and resolves all the
@@ -70,6 +73,7 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
     private final Adapter lower;
     final Scanner scanner;
     final NetworkGraph networkGraph;
+    NetworkGraph Multipath_networkGraph;
 
     final HashMap<NodeAddress, LinkedList<NodeAddress>> results;
     
@@ -100,26 +104,49 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
         this.lower = lower;
         bQ = new ArrayBlockingQueue<>(1000);
         this.networkGraph = networkGraph;
+        this.Multipath_networkGraph = new VisualNetworkGraph(networkGraph.getTimeout(), networkGraph.getRssiResolution());
         results = new HashMap<>();
         scanner = new Scanner(System.in, "UTF-8");
         isStopped = false;
         sinkAddress = new NodeAddress("0.1");
     }
-
+    boolean t = false;
     public void managePacket(NetworkPacket data) {
 
         switch (data.getType()) {
             case SDN_WISE_REPORT:
+                //System.out.println("IN <<<<<<<<<<<< SDN_WISE_REPORT");
                 ReportPacket pkt = new ReportPacket(data);
                 this.nodesBattery.put(pkt.getSrc().toString(), pkt.getBatt());
-                networkGraph.updateMap(pkt);
+                int src_addr = Math.round(Float.parseFloat(pkt.getSrc().toString()) * 100);
+                
+                if(pkt.getSrc().toString().equals("0.1")){
+                    networkGraph.updateMap(pkt, 0);   
+                    Multipath_networkGraph.updateMap(pkt, 1);
+                } else {
+                    if(src_addr < 20){
+                        Multipath_networkGraph.updateMap(pkt, 1);
+                    } else {
+                        networkGraph.updateMap(pkt, 0);      
+                    }
+                }
+
+  
+                
+               // if((pkt.getSrc().toString()).equals("0.2")){
+               // Multipath_networkGraph.isitworking = true;
                 break;
             case SDN_WISE_DATA:
+                //System.out.println("IN <<<System<<<<<<<<< SDN_WISE_DATA");
             case SDN_WISE_BEACON:
+                //System.out.println("IN <<<System<<<<<<<<< SDN_WISE_BEACON");
             case SDN_WISE_RESPONSE:
+                //System.out.println("IN <<<System<<<<<<<<< SDN_WISE_RESPONSE");
             case SDN_WISE_OPEN_PATH:
+                //System.out.println("IN <<<System<<<<<<<<< SDN_WISE_OPEN_PATH");
                 break;
             case SDN_WISE_CONFIG:
+                //System.out.println("IN <<<System<<<<<<<<< SDN_WISE_CONFIG");
 
                 ConfigPacket cp = new ConfigPacket(data);
 
@@ -165,8 +192,12 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
                 cache.put(key, cp);
                 break;
             default:
-                if (data.isRequest()) {
-                    manageRoutingRequest(data);
+                if (data.isRequest()){// && Multipath_networkGraph.isitworking) {
+                   //manageRoutingRequest(data);
+                   System.out.println("\n\n::::::::::::::::::::::::::::::::::::::::::::::::::: NODE " + data.getDst());
+                   MultiplePath_manageRoutingRequest(data);
+                    //Multipath_networkGraph.isitworking = false;
+
                 }
                 break;
         }

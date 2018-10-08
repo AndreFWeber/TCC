@@ -63,25 +63,19 @@ public class ControllerTCC extends Controller {
 
         String destination = data.getNetId() + "." + data.getDst();
         String source = data.getNetId() + "." + data.getSrc();
-            System.out.println("BEGIN\n\n");
         for(Map.Entry<String, Integer> entry : nodesBattery.entrySet()) {
             String key = entry.getKey();
             int value = entry.getValue();
-                        System.out.println("MODULO: " + key + " BATTERY: " + value);
-
             // do what you have to do here
             // In your case, another loop.
         }
-                    System.out.println("END\n\n");
 
         if (!source.equals(destination)) {
-
             Node sourceNode = networkGraph.getNode(source);
             Node destinationNode = networkGraph.getNode(destination);
             LinkedList<NodeAddress> path = null;
 
             if (sourceNode != null && destinationNode != null) {
-
                 if (!lastSource.equals(source) || lastModification != networkGraph.getLastModification()) {
                     results.clear();
                     dijkstra.init(networkGraph.getGraph());
@@ -106,7 +100,6 @@ public class ControllerTCC extends Controller {
                     data.unsetRequestFlag();
                     data.setSrc(getSinkAddress());
                     sendNetworkPacket(data);
-
                 } else {
                     // TODO send a rule in order to say "wait I dont have a path"
                     //sendMessage(data.getNetId(), data.getDst(),(byte) 4, new byte[10]);
@@ -114,7 +107,77 @@ public class ControllerTCC extends Controller {
             }
         }
     }
+                    LinkedList<Integer> nodesB = new LinkedList<>();
+                    LinkedList<String> nodesID = new LinkedList<>();
 
+     public final void MultiplePath_manageRoutingRequest(NetworkPacket data) {
+        String destination = data.getNetId() + "." + data.getDst();
+        String source = data.getNetId() + "." + data.getSrc();
+
+        for(Map.Entry<String, Integer> entry : nodesBattery.entrySet()) {
+            String key = entry.getKey();
+            int value = entry.getValue();
+            // do what you have to do here
+            // In your case, another loop.
+        }
+        
+        if (!source.equals(destination)) {
+            Node sourceNode =  Multipath_networkGraph.getNode(source);
+            Node destinationNode = Multipath_networkGraph.getNode(destination);
+            LinkedList<NodeAddress> path = null;
+
+            if (sourceNode != null && destinationNode != null) {
+                    //System.out.println("NO CAMINHO::: FROM: " + source + " To: " + destination );
+                    results.clear();
+                    dijkstra.init(Multipath_networkGraph.getGraph());
+                    dijkstra.setSource(Multipath_networkGraph.getNode(source));
+                    dijkstra.compute();
+                    lastSource = source;
+                    lastModification = Multipath_networkGraph.getLastModification();
+
+                    path = new LinkedList<>();
+
+                    for (Node node : dijkstra.getPathNodes(Multipath_networkGraph.getNode(destination))) {
+                        path.push((NodeAddress) node.getAttribute("nodeAddress"));
+                        //System.out.println("TESTE>>>>>>>>>>>> " + node.getAttribute("nodeAddress")+ " " + data.getDst() + " " + node.getAttribute("nodeAddress").equals(data.getDst()) );
+                        if(!node.getAttribute("nodeAddress").equals(data.getDst()) && !node.getAttribute("nodeAddress").equals(data.getSrc())){
+                            //.out.println("NO CAMINHO::: FROM: " + source + " To: " + destination + " -----*****-----" + node.getAttribute("nodeAddress"));
+                           nodesID.push(node.getId());
+                           Multipath_networkGraph.removeNode(node);
+                        }
+                    }
+                    System.out.println("[CTRL]: " + path);
+                    results.put(data.getDst(), path);         
+                if (path.size() > 1 && path.size() > 2) {
+                     System.out.println("-------------------Procurando caminho alternativo...  para: FROM:" + source + " To: " + destination);
+                     MultiplePath_manageRoutingRequest(data);
+                } else {
+                    System.out.println("FIM____________________________________ FROM:" + source + " To: " + destination + " " + nodesB.size());
+                    if(nodesB.size() > 0) {
+                        int numberOfNodes = nodesB.size();
+                        int index = 0;
+                        while (numberOfNodes-- > 0 ) {
+                            //System.out.println(" add " + id);
+                            
+                            Node n = Multipath_networkGraph.getNode(nodesID.get(index));
+                            Multipath_networkGraph.updateNode(n, nodesB.get(index), n.getAttribute("lastSeen"));
+
+                            //Node newNode = Multipath_networkGraph.addNode(n.getId());
+                            //Multipath_networkGraph.setupNode(newNode, n.getAttribute("battery"), n.getAttribute("lastSeen"), n.getAttribute("netId"), n.getAttribute("nodeAddress"));
+                            
+                        }
+                    }
+                    nodesB.clear();
+                    nodesID.clear();
+                    // TODO send a rule in order to say "wait I dont have a path"
+                    //sendMessage(data.getNetId(), data.getDst(),(byte) 4, new byte[10]);
+                }
+            }
+        }
+    }
+
+    
+    
     @Override
     public void setupNetwork() {
 

@@ -40,6 +40,7 @@ public final class VisualNetworkGraph extends NetworkGraph {
      * @param timeout the time to live for a node in seconds
      * @param rssiResolution the RSSI resolution
      */
+        
     public VisualNetworkGraph(int timeout, int rssiResolution) {
         super(timeout, rssiResolution);
 
@@ -53,14 +54,14 @@ public final class VisualNetworkGraph extends NetworkGraph {
     }
 
     @Override
-    void setupNode(Node node, int batt, long now, int netId, NodeAddress addr) {
+    public void setupNode(Node node, int batt, long now, int netId, NodeAddress addr) {
         super.setupNode(node, batt, now, netId, addr);
         node.addAttribute("ui.label", node.getId());
         node.changeAttribute("ui.style", "fill-color: rgb(0," + batt + ",0),rgb(0,0,0);");
     }
 
     @Override
-    void updateNode(Node node, int batt, long now) {
+    public void updateNode(Node node, int batt, long now) {
         super.updateNode(node, batt, now);
         node.changeAttribute("ui.style", "fill-color: rgb(0," + batt + ",0),rgb(0,0,0);");
     }

@@ -151,7 +151,7 @@
       uint8_t j = 0;
       for (j = 0; j < ADDRESS_LENGTH; ++j){ 
         set_payload_at(p,i,n->address.u8[j]);
-	++i;
+		++i;
       }
       set_payload_at(p,i,n->rssi);
       ++i;

@@ -41,7 +41,7 @@ public class NetworkGraph extends Observable {
     private final int timeout;
     final int rssiResolution;
     private long lastCheck;
-
+    public boolean isitworking = false;
     /**
      * This constructor returns the NetworkGraph object. It requires a time to
      * live for each node in the network and a value representing the RSSI
@@ -60,7 +60,7 @@ public class NetworkGraph extends Observable {
         graph.setAutoCreate(true);
         graph.setStrict(false);
     }
-
+    
     /**
      * Returns the last time instant when the NetworkGraph was updated.
      *
@@ -96,6 +96,14 @@ public class NetworkGraph extends Observable {
         return modified;
     }
 
+    public int getTimeout() {
+        return timeout;
+    }
+
+    public int getRssiResolution() {
+        return rssiResolution;
+    }
+
     /**
      * This method is invoked when a message with topology updates is received
      * by the controller. It updates the network topology according to the
@@ -103,7 +111,7 @@ public class NetworkGraph extends Observable {
      *
      * @param packet the NetworkPacket received
      */
-    public final synchronized void updateMap(ReportPacket packet) {
+    public final synchronized void updateMap(ReportPacket packet, int clusterID) {
 
         long now = System.currentTimeMillis();
         boolean modified = checkConsistency(now);
@@ -113,7 +121,7 @@ public class NetworkGraph extends Observable {
         String nodeId = packet.getSrc().toString();
         String fullNodeId = netId + "." + nodeId;
         NodeAddress addr = packet.getSrc();
-        System.out.println("BATERIA DO MODULO " + nodeId + " = " + batt);
+        int src_addr = Math.round(Float.parseFloat(nodeId) * 10);
 
         Node node = getNode(fullNodeId);
 
@@ -123,6 +131,12 @@ public class NetworkGraph extends Observable {
 
             for (int i = 0; i < packet.getNeigh(); i++) {
                 NodeAddress otheraddr = packet.getNeighbourAddress(i);
+                int other_addr = Math.round(Float.parseFloat(otheraddr.toString()) * 100);
+
+                if((other_addr > 19 && clusterID == 0 )|| (other_addr < 20 && clusterID == 1 )){
+                } else {
+                    continue;
+                }
                 String other = netId + "." + otheraddr.toString();
                 if (getNode(other) == null) {
                     Node tmp = addNode(other);
@@ -145,6 +159,12 @@ public class NetworkGraph extends Observable {
 
             for (int i = 0; i < packet.getNeigh(); i++) {
                 NodeAddress otheraddr = packet.getNeighbourAddress(i);
+                int other_addr = Math.round(Float.parseFloat(otheraddr.toString()) * 100);
+
+                if((other_addr > 19 && clusterID == 0 )|| (other_addr < 20 && clusterID == 1 )){
+                } else {
+                    continue;
+                }
                 String other = netId + "." + otheraddr.toString();
                 if (getNode(other) == null) {
                     Node tmp = addNode(other);
@@ -184,18 +204,19 @@ public class NetworkGraph extends Observable {
         }
     }
 
+    
     final boolean isAlive(long threashold, long lastSeen, long now) {
         return ((now - lastSeen) < threashold * 1000);
     }
 
-    void setupNode(Node node, int batt, long now, int netId, NodeAddress addr) {
+    public void setupNode(Node node, int batt, long now, int netId, NodeAddress addr) {
         node.addAttribute("battery", batt);
         node.addAttribute("lastSeen", now);
         node.addAttribute("netId", netId);
         node.addAttribute("nodeAddress", addr);
     }
 
-    void updateNode(Node node, int batt, long now) {
+    public void updateNode(Node node, int batt, long now) {
         node.addAttribute("battery", batt);
         node.addAttribute("lastSeen", now);
     }
@@ -208,7 +229,7 @@ public class NetworkGraph extends Observable {
         edge.addAttribute("length", newLen);
     }
 
-    <T extends Node> T addNode(String id) {
+    public <T extends Node> T addNode(String id) {
         return graph.addNode(id);
     }
 
@@ -221,7 +242,7 @@ public class NetworkGraph extends Observable {
         return graph.removeEdge(edge);
     }
 
-    <T extends Node> T removeNode(Node node) {
+   public  <T extends Node> T removeNode(Node node) {
         return graph.removeNode(node);
     }
 
