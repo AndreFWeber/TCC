@@ -89,17 +89,19 @@ public class SdnWise {
         
         // We wait for the network to start 
         try {
-            Thread.sleep(40000);
+            Thread.sleep(80000);
         
             // Then we query the nodes
             boolean source = true; //false = source 0
-            int i = 0; 
+            //int i = 0; 
             while (true){    
                 //for (int i = 1; i <= 5; i++){
                     //System.out.println("_______________________________quering node " + i);
                     int netId = 1;
                     
                     NodeAddress dst = new NodeAddress((source?9:18));
+                    //NodeAddress dst = new NodeAddress(i);
+
                     source=!source;
                     NodeAddress src = new NodeAddress(1);
                     DataPacket p = new DataPacket(netId,src,dst);

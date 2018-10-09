@@ -73,19 +73,19 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
     private final Adapter lower;
     final Scanner scanner;
     final NetworkGraph networkGraph;
-    NetworkGraph Multipath_networkGraph;
+    NetworkGraph cluster1_networkGraph;
+    NetworkGraph cluster0_networkGraph;
 
     final HashMap<NodeAddress, LinkedList<NodeAddress>> results;
-    
-    protected Map<String, Integer> nodesBattery = new HashMap<String,Integer>();
-    
+
+    protected Map<String, Integer> nodesBattery = new HashMap<String, Integer>();
+
     private boolean isStopped;
     private final ArrayBlockingQueue<NetworkPacket> bQ;
 
     final Map<String, ConfigPacket> cache = ExpiringMap.builder()
             .expiration(5, TimeUnit.SECONDS)
             .build();
-
 
     private final NodeAddress sinkAddress;
 
@@ -104,44 +104,45 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
         this.lower = lower;
         bQ = new ArrayBlockingQueue<>(1000);
         this.networkGraph = networkGraph;
-        this.Multipath_networkGraph = new VisualNetworkGraph(networkGraph.getTimeout(), networkGraph.getRssiResolution());
+        this.cluster0_networkGraph = new VisualNetworkGraph(networkGraph.getTimeout(), networkGraph.getRssiResolution());
+        this.cluster1_networkGraph = new VisualNetworkGraph(networkGraph.getTimeout(), networkGraph.getRssiResolution());
+
         results = new HashMap<>();
         scanner = new Scanner(System.in, "UTF-8");
         isStopped = false;
         sinkAddress = new NodeAddress("0.1");
     }
     boolean t = false;
-    public void managePacket(NetworkPacket data) {
 
+    public void managePacket(NetworkPacket data) {
         switch (data.getType()) {
             case SDN_WISE_REPORT:
                 //System.out.println("IN <<<<<<<<<<<< SDN_WISE_REPORT");
                 ReportPacket pkt = new ReportPacket(data);
+                
+                networkGraph.updateMap(pkt, -1);
+                
                 this.nodesBattery.put(pkt.getSrc().toString(), pkt.getBatt());
                 int src_addr = Math.round(Float.parseFloat(pkt.getSrc().toString()) * 100);
-                
-                if(pkt.getSrc().toString().equals("0.1")){
-                    networkGraph.updateMap(pkt, 0);   
-                    Multipath_networkGraph.updateMap(pkt, 1);
+
+                if (pkt.getSrc().toString().equals("0.1")) 
+                {
+                    cluster0_networkGraph.updateMap(pkt, 0);
+                    cluster1_networkGraph.updateMap(pkt, 1);
                 } else {
-                    if(src_addr < 20){
-                        Multipath_networkGraph.updateMap(pkt, 1);
+                    if (src_addr < 20) {
+                        cluster1_networkGraph.updateMap(pkt, 1);
                     } else {
-                        networkGraph.updateMap(pkt, 0);      
+                        cluster0_networkGraph.updateMap(pkt, 0);
                     }
                 }
-
-  
-                
-               // if((pkt.getSrc().toString()).equals("0.2")){
-               // Multipath_networkGraph.isitworking = true;
                 break;
             case SDN_WISE_DATA:
-                //System.out.println("IN <<<System<<<<<<<<< SDN_WISE_DATA");
+            //System.out.println("IN <<<System<<<<<<<<< SDN_WISE_DATA");
             case SDN_WISE_BEACON:
-                //System.out.println("IN <<<System<<<<<<<<< SDN_WISE_BEACON");
+            //System.out.println("IN <<<System<<<<<<<<< SDN_WISE_BEACON");
             case SDN_WISE_RESPONSE:
-                //System.out.println("IN <<<System<<<<<<<<< SDN_WISE_RESPONSE");
+            //System.out.println("IN <<<System<<<<<<<<< SDN_WISE_RESPONSE");
             case SDN_WISE_OPEN_PATH:
                 //System.out.println("IN <<<System<<<<<<<<< SDN_WISE_OPEN_PATH");
                 break;
@@ -192,11 +193,21 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
                 cache.put(key, cp);
                 break;
             default:
-                if (data.isRequest()){// && Multipath_networkGraph.isitworking) {
-                   //manageRoutingRequest(data);
-                   System.out.println("\n\n::::::::::::::::::::::::::::::::::::::::::::::::::: NODE " + data.getDst());
-                   MultiplePath_manageRoutingRequest(data);
-                    //Multipath_networkGraph.isitworking = false;
+                if (data.isRequest()) {/*
+                    int t = Math.round(Float.parseFloat(data.getDst().toString()) * 100);
+
+                    if (t == 90) {
+                        System.out.println("\n\nCLUSTER 0::::::::::::::::::::::::::::::::::::::::::::::::::: NODE " + data.getDst());
+
+                        MultiplePath_manageRoutingRequest(data, cluster0_networkGraph);
+                    } else {
+                        System.out.println("\n\nCLUSTER 1::::::::::::::::::::::::::::::::::::::::::::::::::: NODE " + data.getDst());
+
+                        MultiplePath_manageRoutingRequest(data, cluster1_networkGraph);
+                    }*/
+                    //manageRoutingRequest(data);
+                   System.out.println("\n\nINICIO____________________________________ FROM:" +  data.getSrc() + " To: " +  data.getDst() + " ");
+                   MultiplePath_manageRoutingRequest(data, networkGraph);
 
                 }
                 break;
@@ -215,12 +226,12 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
      */
     @Override
     public void update(Observable o, Object arg) {
-       if (o.equals(lower)) {
+        if (o.equals(lower)) {
             try {
                 bQ.put(new NetworkPacket((byte[]) arg));
             } catch (InterruptedException ex) {
-        System.out.println("OBSERVER AQUI");
- 
+                System.out.println("OBSERVER AQUI");
+
                 log(Level.SEVERE, ex.getMessage());
             }
         } else if (o.equals(networkGraph)) {

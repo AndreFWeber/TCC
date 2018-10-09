@@ -19,6 +19,7 @@ package com.github.sdnwiselab.sdnwise.topology;
 import com.github.sdnwiselab.sdnwise.packet.ReportPacket;
 import com.github.sdnwiselab.sdnwise.util.NodeAddress;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Observable;
 import java.util.Set;
 import org.graphstream.graph.Edge;
@@ -133,7 +134,7 @@ public class NetworkGraph extends Observable {
                 NodeAddress otheraddr = packet.getNeighbourAddress(i);
                 int other_addr = Math.round(Float.parseFloat(otheraddr.toString()) * 100);
 
-                if((other_addr > 19 && clusterID == 0 )|| (other_addr < 20 && clusterID == 1 )){
+                if((other_addr > 19 && clusterID == 0 )|| (other_addr < 20 && clusterID == 1 || clusterID== -1)){
                 } else {
                     continue;
                 }
@@ -161,7 +162,7 @@ public class NetworkGraph extends Observable {
                 NodeAddress otheraddr = packet.getNeighbourAddress(i);
                 int other_addr = Math.round(Float.parseFloat(otheraddr.toString()) * 100);
 
-                if((other_addr > 19 && clusterID == 0 )|| (other_addr < 20 && clusterID == 1 )){
+                if((other_addr > 19 && clusterID == 0 )|| (other_addr < 20 && clusterID == 1 || clusterID== -1)){
                 } else {
                     continue;
                 }
@@ -204,6 +205,37 @@ public class NetworkGraph extends Observable {
         }
     }
 
+    public void copy(NetworkGraph n){
+        //NetworkGraph n = new NetworkGraph(this.timeout, this.rssiResolution);
+        Graph g = n.getGraph();
+                
+        int n_edges = g.getEdgeCount();
+        int n_nodes = g.getNodeCount();
+                
+        Iterator node_itr = g.getNodeIterator();
+        Iterator edge_itr ;//= this.graph.getEdgeIterator();
+        
+        while(node_itr.hasNext()) {
+            Node thisNode = (Node)node_itr.next();
+            //System.out.println(thisNode.getId() + "<<<<<<<<<<NODE ");
+                                      
+            Node node = this.addNode(thisNode.getId());
+            this.setupNode(node, thisNode.getAttribute("battery"), thisNode.getAttribute("lastSeen"), thisNode.getAttribute("netId"), thisNode.getAttribute("nodeAddress"));
+                                    
+            edge_itr = thisNode.getEdgeIterator();
+           // Iterable<Edge> edges = thisNode.getEachEdge();
+            while(edge_itr.hasNext()) {
+                Edge thisEdge = (Edge)edge_itr.next();
+                Edge edge = this.addEdge(thisEdge.getId(), thisEdge.getSourceNode().toString(), thisEdge.getTargetNode().toString(), true);
+                this.setupEdge(edge, thisEdge.getAttribute("length"));
+               // System.out.println("PORRAA>>>>>>>>>>>>>>>>>>> " + thisEdge.toString() + " "+thisEdge.getSourceNode().toString() + " " + thisEdge.getTargetNode());
+            }
+        }
+            lastModification = n.getLastModification();
+            setChanged();
+            notifyObservers();
+        //return n;
+    }
     
     final boolean isAlive(long threashold, long lastSeen, long now) {
         return ((now - lastSeen) < threashold * 1000);

@@ -108,8 +108,9 @@ public class ControllerDijkstra extends Controller {
 
     }
 
+
     @Override
-    public void MultiplePath_manageRoutingRequest(NetworkPacket data) {
+    public void MultiplePath_manageRoutingRequest(NetworkPacket data, NetworkGraph _networkGraph) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 }
