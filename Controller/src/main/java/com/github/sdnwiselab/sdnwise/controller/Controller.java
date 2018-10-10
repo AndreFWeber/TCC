@@ -78,7 +78,7 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
 
     final HashMap<NodeAddress, LinkedList<NodeAddress>> results;
 
-    protected Map<String, Integer> nodesBattery = new HashMap<String, Integer>();
+    protected Map<NodeAddress, Integer> nodesBattery = new HashMap<NodeAddress, Integer>();
 
     private boolean isStopped;
     private final ArrayBlockingQueue<NetworkPacket> bQ;
@@ -122,7 +122,7 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
                 
                 networkGraph.updateMap(pkt, -1);
                 
-                this.nodesBattery.put(pkt.getSrc().toString(), pkt.getBatt());
+                this.nodesBattery.put(pkt.getSrc(), pkt.getBatt());
                 int src_addr = Math.round(Float.parseFloat(pkt.getSrc().toString()) * 100);
 
                 if (pkt.getSrc().toString().equals("0.1")) 
