@@ -99,8 +99,8 @@ public class SdnWise {
                     //System.out.println("_______________________________quering node " + i);
                     int netId = 1;
                     
-                    NodeAddress dst = new NodeAddress((source?9:18));
-                    //NodeAddress dst = new NodeAddress(i);
+                    //NodeAddress dst = new NodeAddress((source?9:18));
+                    NodeAddress dst = new NodeAddress(9);
 
                     source=!source;
                     NodeAddress src = new NodeAddress(1);

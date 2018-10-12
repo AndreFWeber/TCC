@@ -128,13 +128,24 @@ public class ControllerTCC extends Controller {
             boolean keepShortestPath = false;
             boolean pathMatch = false;
             int pathMatchIndex = 0;
-
+            boolean pathSuitable = true; //Devido a bateria de um ou mais modulos...
             int i = 0;
             for (Iterator it = this.pathVector.iterator(); it.hasNext(); i++) {
                 LinkedList<NodeAddress> p = (LinkedList<NodeAddress> )it.next();
-                System.out.println("p.size() "+ p.size() + " shorterPathHops " + shorterPathHops);
+                //System.out.println("p.size() "+ p.size() + " shorterPathHops " + shorterPathHops);
                 
                 if(p.size()<initialSize)
+                    continue;
+                for (NodeAddress na : p){
+                    //System.out.println(" LOOP- " + nodesBattery.get(na));
+                        if(nodesBattery.get(na) < BATTERY_MINIMUM_THRESHOLD){
+                            pathSuitable=false;
+                            break;
+                        } else {
+                            pathSuitable=true;
+                        }
+                }
+                if(!pathSuitable)
                     continue;
                 
                 if(p.size() < shorterPathHops){
@@ -147,8 +158,9 @@ public class ControllerTCC extends Controller {
                 if(!numberOfHopsAvailable.contains(p.size()))
                     numberOfHopsAvailable.add(p.size());
             }
-            System.out.println("0 - "+numberOfHopsAvailable.toString());
-            System.out.println("1- " + shorterPathIndex.toString());
+            //System.out.println("0 - "+numberOfHopsAvailable.toString());
+            //System.out.println("1- " + shorterPathIndex.toString());
+            
             //Verifica se o ha um path A->B ativo.
             boolean pathIsActive = active_paths.containsKey(pathVector.get(0).getLast());     
             if(pathIsActive){
@@ -158,14 +170,14 @@ public class ControllerTCC extends Controller {
                     NodeAddress addr = pathVector.get(index).getLast();
 
 
-                    System.out.println("2- " + addr.toString());
+                    //System.out.println("2- " + addr.toString());
                     //if(!pathIsActive){
                     //    break;
                     //} else {
                         //Se existe. Verifica se o caminho ativo existe e se esta entre os mais curtos.
                         LinkedList<NodeAddress> activePath = active_paths.get(addr);
                         //if(activePath==null);
-                        System.out.println("3- "+ activePath.toString() + " " + pathVector.get(index).toString());
+                        //System.out.println("3- "+ activePath.toString() + " " + pathVector.get(index).toString());
                         for (NodeAddress na : activePath){
                             if(pathVector.get(index).contains(na)){
                                 pathMatch = true;
@@ -175,8 +187,11 @@ public class ControllerTCC extends Controller {
                                 break;
                             } 
                         }
-                        System.out.println("4- "+pathMatch);
+                        //System.out.println("4- "+pathMatch);
                         if(pathMatch){
+                            keepShortestPath=true;
+                            break;
+                            /*
                             for (NodeAddress na : activePath){
                                 System.out.println("5 LOOP- " + nodesBattery.get(na));
                                 if(nodesBattery.get(na) < BATTERY_MINIMUM_THRESHOLD){
@@ -185,14 +200,14 @@ public class ControllerTCC extends Controller {
                                 } else {
                                     keepShortestPath=true;
                                 }
-                            }
+                            }*/
                         } 
                     //}
 
                 }
             } 
-            System.out.println("6 - " + keepShortestPath);
-            if(!keepShortestPath){
+            //System.out.println("6 - " + keepShortestPath);
+            if(!keepShortestPath) {
                 if(pathIsActive){
                     active_paths.remove(pathVector.get(0).getLast());
                     if(pathMatch)
@@ -207,34 +222,38 @@ public class ControllerTCC extends Controller {
                         for (NodeAddress na :  pathVector.get(index)){
                             level += nodesBattery.get(na);
                         }
-                        System.out.println("6a- " + level + " do " + index);
+                        //System.out.println("6a- " + level + " do " + index);
 
                         if(level > pathBatteryLevel){
                             pathBatteryLevel = level;
                             pathToSend = pathVector.get(index);
                         }
                     }
-                    System.out.println("7 - " + pathToSend);
+                    //System.out.println("7 - " + pathToSend);
                 } else {
-                    if(shorterPathIndex.isEmpty()){
-                        numberOfHopsAvailable.remove(0);
+                    if(shorterPathIndex.isEmpty()){                        
+                        if(!numberOfHopsAvailable.isEmpty())
+                            numberOfHopsAvailable.remove(0);
                         if(numberOfHopsAvailable.isEmpty()){
-                            System.out.println("8 - NO MORE PATHS AVAILABLE" );
+                            System.out.println(" NO MORE PATHS AVAILABLE" );
                         } else {
                             findBestPath((Integer)numberOfHopsAvailable.get(0));
                         }
                     } else {
                         pathToSend = pathVector.get((Integer)shorterPathIndex.get(0));
-                        System.out.println("8 - " + pathToSend);                    
+                        //System.out.println("8 - " + pathToSend);                    
                     }
                 }
             } else {
                 pathToSend = active_paths.get(pathVector.get(0).getLast());
-                System.out.println("9 - " + pathToSend);               
+                //System.out.println("9 - " + pathToSend);               
             }
             
-            if(pathToSend!=null)
+            if(pathToSend != null)
                 active_paths.put(pathVector.get(0).getLast(), pathToSend);
+            else 
+                System.out.println("PATH TO SEND" + pathToSend);
+                
             if(!pathVector.isEmpty())
                 System.out.println("<<<<<<<< "+ pathVector.get(0).getLast());
             this.pathVector.clear();
