@@ -143,6 +143,7 @@ public interface ControllerInterface {
      */
     void manageRoutingRequest(NetworkPacket data);
     void MultiplePath_manageRoutingRequest(NetworkPacket data, NetworkGraph _networkGraph);
+    void clearFlowtable(NetworkPacket data);
     /**
      * This method removes an address in the list of addresses accepted by the
      * node.
@@ -171,6 +172,8 @@ public interface ControllerInterface {
      */
     void removeRule(byte netId, NodeAddress destination, FlowTableEntry rule);
 
+    
+    
     /**
      * This method sets the Network ID of a node. The new value is passed using
      * a byte.

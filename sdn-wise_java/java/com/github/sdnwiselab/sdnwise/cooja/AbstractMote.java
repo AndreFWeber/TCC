@@ -348,7 +348,6 @@ public abstract class AbstractMote extends AbstractApplicationMote {
                     }
                     break;
                 case SDN_WISE_CNF_REMOVE_RULE_INDEX:
-					log(">>>>>>>>>>>>>>>>>SDN_WISE_CNF_REMOVE_RULE_INDEX<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
                     if (value != 0) {
                         flowTable.set(getActualFlowIndex(value), new FlowTableEntry());
                     }
@@ -609,9 +608,15 @@ public abstract class AbstractMote extends AbstractApplicationMote {
     }
 
     private void clearTable(OpenPathPacket opp) {
-        if (isAcceptedIdPacket(opp)) {
+        log("***********************clearTable 0 ******************* " );
+		  int remove_rule_index = 1;
+//        if (!isAcceptedIdPacket(opp)) {
             List<NodeAddress> path = opp.getPath();
+            log("***********************clearTable 1 " + path.toString());
+
             for (int i = 0; i < path.size(); i++) {
+	            log("***********************clearTable 2 for" + i);
+
                 NodeAddress actual = path.get(i);
                 if (isAcceptedIdAddress(actual)) {
                     /* 
@@ -623,13 +628,18 @@ public abstract class AbstractMote extends AbstractApplicationMote {
                     //This adds tules to but the first node (sink).
                     //i.e adds path to the left of THIS
                     if (i != 0) {
-				   		log("***********************Clean pos1");
+				   		log("***********************Clean pos1 " + actual.toString());
+                        log("***********************removinf on index  " + remove_rule_index++ );
+                        flowTable.set(remove_rule_index, new FlowTableEntry());
+
                     }
 
                     //This adds rules for all but the last mote.
                     //i.e adds path to the right of THIS
                     if (i != (path.size() - 1)) {
-						log("***********************Clean pos0");
+						log("***********************Clean pos0 " + actual.toString());
+                        log("***********************removinf on index  " + remove_rule_index );
+                        flowTable.set(remove_rule_index, new FlowTableEntry());
 
                         opp.setDst(path.get(i + 1));
                         opp.setNxhop(path.get(i + 1));
@@ -639,7 +649,7 @@ public abstract class AbstractMote extends AbstractApplicationMote {
                 }
 
     		}
-		}
+		//}
 	}
 
     private int searchRule(FlowTableEntry rule) {

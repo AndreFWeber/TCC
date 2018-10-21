@@ -275,7 +275,17 @@ public class ControllerTCC extends Controller {
         }
         return null;
     }
+    @Override
+    public void clearFlowtable(NetworkPacket data){
+        if(active_paths.isEmpty())
+            System.out.println("Active Path is empty");
+        else {
+            System.out.println("sendClearFlowtable - " + data.getSrc().toString() + " clear " + active_paths.get(data.getSrc()).toString());
+            sendClearFlowtable((byte) data.getNetId(), data.getSrc(), active_paths.get(data.getSrc()));
+        }
+    }
     
+    @Override
     public final void MultiplePath_manageRoutingRequest(NetworkPacket data, NetworkGraph _networkGraph) {
         NetworkGraph tmp_networkGraph = new NetworkGraph(_networkGraph.getTimeout(), _networkGraph.getRssiResolution());;
         tmp_networkGraph.copy(_networkGraph);
@@ -332,11 +342,6 @@ public class ControllerTCC extends Controller {
             }
         }
     }
-
-    public void clear(){
-        
-    }
-    
     
     @Override
     public void setupNetwork() {

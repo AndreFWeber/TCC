@@ -137,15 +137,7 @@ int integerRemovedor=0;
                     }
                 }
                 if(integerRemovedor++>10 && data.getSrc().toString().equals("0.4")){
-                    if(active_paths.isEmpty())
-                        System.out.println("TA VAZIO ESSA PORRA");
-                    else {
-                        System.out.println("bosta: " + active_paths.toString());
-                        System.out.println("0000000000000000000000000000000000000REMOVE¬¬¬¬¬" + data.getSrc().toString());
-                        System.out.println("  " +active_paths.get(data.getSrc()).toString());
-                        sendClearFlowtable((byte) data.getNetId(), data.getSrc(), active_paths.get(data.getSrc()));
-                    }
-                    //removeRule((byte)data.getNetId(), data.getSrc(), 1);
+                    clearFlowtable(data);
                 }
                 break;
             case SDN_WISE_DATA:
@@ -216,9 +208,9 @@ int integerRemovedor=0;
 
                         MultiplePath_manageRoutingRequest(data, cluster1_networkGraph);
                     }*/
-                    manageRoutingRequest(data);
+                   // manageRoutingRequest(data);
                    System.out.println("\n\nINICIO____________________________________ FROM:" +  data.getSrc() + " To: " +  data.getDst() + " ");
-                   //MultiplePath_manageRoutingRequest(data, networkGraph);
+                   MultiplePath_manageRoutingRequest(data, networkGraph);
 
                 }
                 break;
