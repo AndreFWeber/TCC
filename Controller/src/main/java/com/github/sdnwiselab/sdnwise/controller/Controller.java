@@ -113,7 +113,7 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
         sinkAddress = new NodeAddress("0.1");
     }
     boolean t = false;
-
+int integerRemovedor=0;
     public void managePacket(NetworkPacket data) {
         switch (data.getType()) {
             case SDN_WISE_REPORT:
@@ -135,6 +135,17 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
                     } else {
                         cluster0_networkGraph.updateMap(pkt, 0);
                     }
+                }
+                if(integerRemovedor++>10 && data.getSrc().toString().equals("0.4")){
+                    if(active_paths.isEmpty())
+                        System.out.println("TA VAZIO ESSA PORRA");
+                    else {
+                        System.out.println("bosta: " + active_paths.toString());
+                        System.out.println("0000000000000000000000000000000000000REMOVE¬¬¬¬¬" + data.getSrc().toString());
+                        System.out.println("  " +active_paths.get(data.getSrc()).toString());
+                        sendClearFlowtable((byte) data.getNetId(), data.getSrc(), active_paths.get(data.getSrc()));
+                    }
+                    //removeRule((byte)data.getNetId(), data.getSrc(), 1);
                 }
                 break;
             case SDN_WISE_DATA:
@@ -205,9 +216,9 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
 
                         MultiplePath_manageRoutingRequest(data, cluster1_networkGraph);
                     }*/
-                    //manageRoutingRequest(data);
+                    manageRoutingRequest(data);
                    System.out.println("\n\nINICIO____________________________________ FROM:" +  data.getSrc() + " To: " +  data.getDst() + " ");
-                   MultiplePath_manageRoutingRequest(data, networkGraph);
+                   //MultiplePath_manageRoutingRequest(data, networkGraph);
 
                 }
                 break;
@@ -279,6 +290,26 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
         sendNetworkPacket(op);
     }
 
+
+        /**
+     * This method sends a SDN_WISE_OPEN_PATH messages to a generic node. This
+     * kind of message holds a list of nodes that will create a path inside the
+     * network.
+     *
+     * @param netId network id of the destination node.
+     * @param destination network address of the destination node.
+     * @param path the list of all the NodeAddresses in the path.
+     */
+    public final void sendClearFlowtable(byte netId, NodeAddress destination,
+            List<NodeAddress> path) {
+        OpenPathPacket op = new OpenPathPacket(netId, sinkAddress, destination);
+        op.setPath(path)
+                .setNxhop(sinkAddress);
+        op.setType((byte)13);
+
+        sendNetworkPacket(op);
+    }
+    
     /**
      * This method sends a generic message to a node. The message is represented
      * by a NetworkPacket.

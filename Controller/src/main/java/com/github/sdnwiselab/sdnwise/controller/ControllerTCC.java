@@ -325,7 +325,6 @@ public class ControllerTCC extends Controller {
                         data.setSrc(getSinkAddress());
                         sendNetworkPacket(data);
                     }
-                    
 
                     // TODO send a rule in order to say "wait I dont have a path"
                     //sendMessage(data.getNetId(), data.getDst(),(byte) 4, new byte[10]);
@@ -334,6 +333,9 @@ public class ControllerTCC extends Controller {
         }
     }
 
+    public void clear(){
+        
+    }
     
     
     @Override

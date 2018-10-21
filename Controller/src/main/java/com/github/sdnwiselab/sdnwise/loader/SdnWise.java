@@ -89,17 +89,17 @@ public class SdnWise {
         
         // We wait for the network to start 
         try {
-            Thread.sleep(65000);
+            Thread.sleep(20000);
         
             // Then we query the nodes
             boolean source = true; //false = source 0
             //int i = 0; 
             while (true){    
-                //for (int i = 1; i <= 5; i++){
+                //for (int i = 1; i <= 4; i++){
                     int netId = 1;
                     
-                    NodeAddress dst = new NodeAddress((source?9:18));
-                    //NodeAddress dst = new NodeAddress(9);
+                    //NodeAddress dst = new NodeAddress((source?9:18));
+                    NodeAddress dst = new NodeAddress(4);
 
                     source=!source;
                     NodeAddress src = new NodeAddress(1);
@@ -109,7 +109,7 @@ public class SdnWise {
 
                     p.setPayload("Hello World!".getBytes(Charset.forName("UTF-8")));
                     controller.sendNetworkPacket(p);
-                    Thread.sleep(2000);
+                    Thread.sleep(1000);
                 //}
             }
         
