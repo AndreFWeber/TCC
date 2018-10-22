@@ -123,6 +123,8 @@ int integerRemovedor=0;
                 networkGraph.updateMap(pkt, -1);
                 
                 this.nodesBattery.put(pkt.getSrc(), pkt.getBatt());
+                //System.out.println(pkt.getSrc().toString() + " <<<<<<<<<<<< SDN_WISE_REPORT" + pkt.getBatt());
+
                 int src_addr = Math.round(Float.parseFloat(pkt.getSrc().toString()) * 100);
 
                 if (pkt.getSrc().toString().equals("0.1")) 
@@ -135,9 +137,6 @@ int integerRemovedor=0;
                     } else {
                         cluster0_networkGraph.updateMap(pkt, 0);
                     }
-                }
-                if(integerRemovedor++>10 && data.getSrc().toString().equals("0.4")){
-                    clearFlowtable(data);
                 }
                 break;
             case SDN_WISE_DATA:
@@ -202,16 +201,15 @@ int integerRemovedor=0;
                     if (t == 90) {
                         System.out.println("\n\nCLUSTER 0::::::::::::::::::::::::::::::::::::::::::::::::::: NODE " + data.getDst());
 
-                        MultiplePath_manageRoutingRequest(data, cluster0_networkGraph);
+                        TCC_manageRoutingRequest(data, cluster0_networkGraph);
                     } else {
                         System.out.println("\n\nCLUSTER 1::::::::::::::::::::::::::::::::::::::::::::::::::: NODE " + data.getDst());
 
-                        MultiplePath_manageRoutingRequest(data, cluster1_networkGraph);
+                        TCC_manageRoutingRequest(data, cluster1_networkGraph);
                     }*/
                    // manageRoutingRequest(data);
                    System.out.println("\n\nINICIO____________________________________ FROM:" +  data.getSrc() + " To: " +  data.getDst() + " ");
-                   MultiplePath_manageRoutingRequest(data, networkGraph);
-
+                   TCC_manageRoutingRequest(data, networkGraph, true);
                 }
                 break;
         }

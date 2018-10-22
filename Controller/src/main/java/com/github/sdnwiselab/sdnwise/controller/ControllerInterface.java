@@ -142,8 +142,10 @@ public interface ControllerInterface {
      * @param data NetworkPacket will be managed.
      */
     void manageRoutingRequest(NetworkPacket data);
-    void MultiplePath_manageRoutingRequest(NetworkPacket data, NetworkGraph _networkGraph);
-    void clearFlowtable(NetworkPacket data);
+    void TCC_manageRoutingRequest(NetworkPacket data, NetworkGraph _networkGraph, boolean SendDataBack);
+    //void clearFlowtable(NetworkPacket data);
+    void clearFlowtable(byte netId, NodeAddress addr/*,  NetworkPacket data*/);
+
     /**
      * This method removes an address in the list of addresses accepted by the
      * node.

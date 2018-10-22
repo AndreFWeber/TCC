@@ -17,13 +17,17 @@
 package com.github.sdnwiselab.sdnwise.controller;
 
 import com.github.sdnwiselab.sdnwise.adapter.Adapter;
+import com.github.sdnwiselab.sdnwise.packet.DataPacket;
 import com.github.sdnwiselab.sdnwise.packet.NetworkPacket;
 import com.github.sdnwiselab.sdnwise.topology.NetworkGraph;
 import com.github.sdnwiselab.sdnwise.util.NodeAddress;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.Vector;
 import org.graphstream.algorithm.Dijkstra;
 import org.graphstream.graph.Node;
@@ -117,7 +121,7 @@ public class ControllerTCC extends Controller {
     *  que os modulos possuem melhor nivel energetico. (i.e: A maior soma do nivel de bateria de todos os 
     *  modulos do path define o melhor caminho)
     */
-    private LinkedList<NodeAddress> findBestPath(int initialSize){
+    private LinkedList<NodeAddress> findBestPath(int initialSize, NetworkPacket data){
         if(!this.pathVector.isEmpty()){
             LinkedList<NodeAddress> pathToSend = null;
 
@@ -217,6 +221,7 @@ public class ControllerTCC extends Controller {
                 System.out.println("6 - " + keepShortestPath);
             if(!keepShortestPath) {
                 if(pathIsActive){
+                    clearFlowtable((byte)data.getNetId(), data.getDst());
                     active_paths.remove(pathVector.get(0).getLast());
                     if(pathMatch)
                         shorterPathIndex.remove(pathMatchIndex);
@@ -248,7 +253,7 @@ public class ControllerTCC extends Controller {
                                 
                             System.out.println(" NO MORE PATHS AVAILABLE" );
                         } else {
-                            findBestPath((Integer)numberOfHopsAvailable.get(0));
+                            findBestPath((Integer)numberOfHopsAvailable.get(0),  data);
                         }
                     } else {
                         pathToSend = pathVector.get((Integer)shorterPathIndex.get(0));
@@ -257,7 +262,7 @@ public class ControllerTCC extends Controller {
                     }
                 }
             } else {
-                pathToSend = active_paths.get(pathVector.get(0).getLast());
+                //pathToSend = active_paths.get(pathVector.get(0).getLast());
                 if(DEBUG_PRINT)
                     System.out.println("9 - " + pathToSend);               
             }
@@ -265,8 +270,7 @@ public class ControllerTCC extends Controller {
             if(pathToSend != null){
                 active_paths.put(pathVector.get(0).getLast(), pathToSend);
                 System.out.println("PATH TO SEND" + pathToSend);
-                this.pathVector.clear();
-
+                this.pathVector.clear();            
                 return pathToSend;
             }
             if(!pathVector.isEmpty())
@@ -275,25 +279,26 @@ public class ControllerTCC extends Controller {
         }
         return null;
     }
+    
     @Override
-    public void clearFlowtable(NetworkPacket data){
+    public void clearFlowtable(byte netId, NodeAddress addr/*,  NetworkPacket data*/){
         if(active_paths.isEmpty())
             System.out.println("Active Path is empty");
         else {
-            System.out.println("sendClearFlowtable - " + data.getSrc().toString() + " clear " + active_paths.get(data.getSrc()).toString());
-            sendClearFlowtable((byte) data.getNetId(), data.getSrc(), active_paths.get(data.getSrc()));
+            System.out.println("sendClearFlowtable - " + addr.toString() + " clear " + active_paths.get(addr).toString());
+            //sendClearFlowtable((byte) data.getNetId(), data.getSrc(), active_paths.get(data.getSrc()));
+            sendClearFlowtable(netId, addr, active_paths.get(addr));
         }
     }
     
     @Override
-    public final void MultiplePath_manageRoutingRequest(NetworkPacket data, NetworkGraph _networkGraph) {
+    public final void TCC_manageRoutingRequest(NetworkPacket data, NetworkGraph _networkGraph, boolean SendDataBack) {
         NetworkGraph tmp_networkGraph = new NetworkGraph(_networkGraph.getTimeout(), _networkGraph.getRssiResolution());;
         tmp_networkGraph.copy(_networkGraph);
-         
+        
         String destination = data.getNetId() + "." + data.getDst();
         String source = data.getNetId() + "." + data.getSrc();
 
-        
         if (!source.equals(destination)) {
             Node sourceNode =  tmp_networkGraph.getNode(source);
             Node destinationNode = tmp_networkGraph.getNode(destination);
@@ -321,19 +326,25 @@ public class ControllerTCC extends Controller {
                         pathVector.add(path);
                     }
                 if (path.size() > 1 && path.size() > 2) {
-                    MultiplePath_manageRoutingRequest(data, tmp_networkGraph);
+                    TCC_manageRoutingRequest(data, tmp_networkGraph, SendDataBack);
                 } else {
                     System.out.println("FIM____________________________________ FROM:" + source + " To: " + destination + " ");
                     this.paths.put(data.getDst(), pathVector);
                     //pathVector.clear();
                     nodesID.clear();
-                    path = findBestPath(0);
+                    path = findBestPath(0, data);
                     if(path != null){
                         System.out.println("*******************SENDING PATH******************");
+                        pathChecker();
+                        
                         sendPath((byte) data.getNetId(), path.getFirst(), path);
-                        data.unsetRequestFlag();
-                        data.setSrc(getSinkAddress());
-                        sendNetworkPacket(data);
+                        if(SendDataBack){
+                            data.unsetRequestFlag();
+                            data.setSrc(getSinkAddress());
+                            sendNetworkPacket(data);
+                        }
+                    } else {
+                        System.out.println("PATH NULL o.0 Ele manteve o caminho... :D ");
                     }
 
                     // TODO send a rule in order to say "wait I dont have a path"
@@ -342,9 +353,35 @@ public class ControllerTCC extends Controller {
             }
         }
     }
+    boolean pathCheckerOn = false;
+    
+    private void pathChecker() {
+        if(pathCheckerOn)
+           return;
+        pathCheckerOn=true;
+        Timer timer = new Timer("MyTimer");//create a new Timer
+        TimerTask timerTask = new TimerTask() {
+            @Override
+            public void run() {
+                System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~CHECK PATH " + active_paths.toString());
+                for (Iterator it = active_paths.keySet().iterator(); it.hasNext();) {
+                    NodeAddress index = (NodeAddress)it.next();
+                    
+                    DataPacket p = new DataPacket(1,getSinkAddress(), index);
+                    p.setNxhop(getSinkAddress());
+                    
+                    p.setPayload("Veryfing if path is OK :D".getBytes(Charset.forName("UTF-8")));
+                    System.out.println(">>>>>>>> :0 " + index.toString());
+                    TCC_manageRoutingRequest(p, networkGraph, false);
+                    System.out.println("/////~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~CHECK PATH");
+
+                }
+            }
+        };
+        timer.scheduleAtFixedRate(timerTask, 20000, 20000);//this line starts the timer at the same time its executed
+    }
     
     @Override
     public void setupNetwork() {
-
     }
 }

@@ -89,7 +89,7 @@ public class SdnWise {
         
         // We wait for the network to start 
         try {
-            Thread.sleep(20000);
+            Thread.sleep(70000);
         
             // Then we query the nodes
             boolean source = true; //false = source 0
@@ -105,11 +105,11 @@ public class SdnWise {
                     NodeAddress src = new NodeAddress(1);
                     DataPacket p = new DataPacket(netId,src,dst);
                     p.setNxhop(src);
-                    System.out.println("_______________________________quering node " + source);
+                    //System.out.println("_______________________________quering node " + source);
 
                     p.setPayload("Hello World!".getBytes(Charset.forName("UTF-8")));
                     controller.sendNetworkPacket(p);
-                    Thread.sleep(1000);
+                    Thread.sleep(2000);
                 //}
             }
         
