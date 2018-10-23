@@ -52,7 +52,8 @@ public class ControllerTCC extends Controller {
 
     LinkedList<String> nodesID = new LinkedList<>();
     private final Vector<LinkedList<NodeAddress>> pathVector = new Vector<>(2); // N here isn't really needed, but it sets the initial capacity of the vector
-    private final int BATTERY_MINIMUM_THRESHOLD = 230;
+    private int BATTERY_MINIMUM_THRESHOLD = 230;
+
     /*
      * Constructor method fo ControllerDijkstra.
      * 
@@ -384,4 +385,6 @@ public class ControllerTCC extends Controller {
     @Override
     public void setupNetwork() {
     }
+
+
 }

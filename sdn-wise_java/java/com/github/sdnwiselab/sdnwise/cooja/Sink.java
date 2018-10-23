@@ -97,8 +97,6 @@ public class Sink extends AbstractMote {
 
     @Override
     public void rxConfig(ConfigPacket packet) {
-        log("Controller-----------");
-
         NodeAddress dest = packet.getDst();
         NodeAddress src = packet.getSrc();
 

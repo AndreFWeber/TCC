@@ -89,6 +89,10 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
 
     private final NodeAddress sinkAddress;
 
+    protected String[] network_source_ids;
+    protected int CHECK_INTERVAL; 
+    protected int perfil_source;
+    
     public NodeAddress getSinkAddress() {
         return sinkAddress;
     }
@@ -112,8 +116,15 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
         isStopped = false;
         sinkAddress = new NodeAddress("0.1");
     }
-    boolean t = false;
-int integerRemovedor=0;
+    
+    //    @Override
+    public void config_source(String interval, String source_node_IDs, String perfil) {
+        network_source_ids = source_node_IDs.split(" ");
+        CHECK_INTERVAL = Integer.parseInt(interval);
+        perfil_source = Integer.parseInt(perfil);
+        System.out.println(";;;;;;;;;;;;;;;;;;;;;;;" + network_source_ids[0] + " legth" + network_source_ids.length + " CHECK_INTERVAL " + CHECK_INTERVAL);
+    }
+    
     public void managePacket(NetworkPacket data) {
         switch (data.getType()) {
             case SDN_WISE_REPORT:
@@ -138,6 +149,13 @@ int integerRemovedor=0;
                         cluster0_networkGraph.updateMap(pkt, 0);
                     }
                 }
+                
+                for(int sindex=0; sindex<network_source_ids.length;sindex++){
+                    if(network_source_ids[sindex].equals(pkt.getSrc().toString())){
+                        sendSourceConfig(data.getNetId(), pkt.getSrc(), (byte)perfil_source);
+                    }
+                }
+                   
                 break;
             case SDN_WISE_DATA:
             //System.out.println("IN <<<System<<<<<<<<< SDN_WISE_DATA");
@@ -152,7 +170,6 @@ int integerRemovedor=0;
                 //System.out.println("IN <<<System<<<<<<<<< SDN_WISE_CONFIG");
 
                 ConfigPacket cp = new ConfigPacket(data);
-
                 if ((cp.getConfigId() == ConfigNodePacket.SDN_WISE_CNF_ID_ADDR)
                         || (cp.getConfigId() == ConfigNodePacket.SDN_WISE_CNF_ID_NET_ID)
                         || (cp.getConfigId() == ConfigNodePacket.SDN_WISE_CNF_RESET)
@@ -281,23 +298,25 @@ int integerRemovedor=0;
     }
 
 
-        /**
-     * This method sends a SDN_WISE_OPEN_PATH messages to a generic node. This
-     * kind of message holds a list of nodes that will create a path inside the
-     * network.
-     *
-     * @param netId network id of the destination node.
-     * @param destination network address of the destination node.
-     * @param path the list of all the NodeAddresses in the path.
-     */
     public final void sendClearFlowtable(byte netId, NodeAddress destination,
             List<NodeAddress> path) {
         OpenPathPacket op = new OpenPathPacket(netId, sinkAddress, destination);
         op.setPath(path)
-                .setNxhop(sinkAddress);
-        op.setType((byte)13);
+          .setNxhop(sinkAddress)
+          .setType((byte)13);
 
         sendNetworkPacket(op);
+    }
+    
+    public final void sendSourceConfig(int netId, NodeAddress destination, byte perfil) {
+
+            ConfigPacket cp = new ConfigPacket(netId, sinkAddress, destination);
+
+            byte pl[] = {(byte)(18 | (1<<7)), 0, perfil};
+            cp.setPayload(pl)
+              .setNxhop(sinkAddress);
+            System.out.println("-----sendSourceConfig--------"+ cp.toString());            
+            sendNetworkPacket(cp);
     }
     
     /**

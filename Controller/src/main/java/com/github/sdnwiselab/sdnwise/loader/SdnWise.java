@@ -44,7 +44,7 @@ public class SdnWise {
      * @throws java.lang.Exception
      */
     public static void main(String[] args) throws Exception {
-        new SdnWise().startExample();
+        new SdnWise().startController_main();
     }
 
     private Controller controller;
@@ -81,9 +81,8 @@ public class SdnWise {
         return controller;
     }
 
-
-    public void startExample() {
-        controller = startController("");
+    public void startController_main() {
+        controller = SdnWise.this.startController("");
 
         System.out.println("SDN-WISE Controller running....");
         

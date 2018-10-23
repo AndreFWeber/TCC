@@ -129,8 +129,8 @@ public abstract class AbstractMote extends AbstractApplicationMote {
 
 */
 
-			public final static byte SDN_WISE_CLEAR_PATH = 13;
-
+	public final static byte SDN_WISE_CLEAR_PATH = 13;
+	public final static byte SDN_WISE_CNF_SOURCE_SETUP = 18;
     public AbstractMote() {
         super();
     }
@@ -307,6 +307,9 @@ public abstract class AbstractMote extends AbstractApplicationMote {
         int pos;
         boolean isWrite = packet.isWrite();
         int id = packet.getConfigId();
+//        log("CONFIG PACKET " + packet.toString());
+//        log("i---CONFIG PACKET " + isWrite + " " + id);
+
         int value = packet.getPayloadAt(1) * 256 + packet.getPayloadAt(2);
         if (isWrite) {
             switch (id) {
@@ -383,6 +386,9 @@ public abstract class AbstractMote extends AbstractApplicationMote {
                 case SDN_WISE_CNF_REMOVE_FUNCTION:
                     functions.remove(value);
                     break;
+				case SDN_WISE_CNF_SOURCE_SETUP:
+					log("PERFIL DE GERACAO " + value);
+					break;
                 default:
                     break;
             }
@@ -691,7 +697,7 @@ public abstract class AbstractMote extends AbstractApplicationMote {
             if (packet.isRequest()) {
                 controllerTX(packet);
             } else {
-                log("##########################TYPE: "+ packet.getType() );
+//                log("##########################TYPE: "+ packet.getType() );
 
                 switch (packet.getType()) {
                     case SDN_WISE_DATA:
@@ -720,7 +726,7 @@ public abstract class AbstractMote extends AbstractApplicationMote {
 					//Made by Andre Felippe Weber to clear the entire flowtable of the mote.
 					//The main goal of it is to clear the flowtable in order to create a new openpath.
 					case SDN_WISE_CLEAR_PATH:
-		                log("=++++++++++++++++++++++++SWITCH: "+ packet.getType() );
+//		                log("=++++++++++++++++++++++++SWITCH: "+ packet.getType() );
  
 						clearTable(new OpenPathPacket(packet));
 						break;
