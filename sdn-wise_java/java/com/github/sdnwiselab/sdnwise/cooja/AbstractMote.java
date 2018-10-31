@@ -77,7 +77,10 @@ public abstract class AbstractMote extends AbstractApplicationMote {
 
     private int cntBeacon = 0;
     private int cntReport = 0;
+	private int cntReportSent = 0;
+	private boolean pathActive = false;
     private int cntUpdTable = 0;
+	private int SDN_WISE_NEW_CNT_REPORT_MAX = 0;
 
     ApplicationRadio radio = null;
     ApplicationLED leds = null;
@@ -323,7 +326,9 @@ public abstract class AbstractMote extends AbstractApplicationMote {
                     cnt_beacon_max = value;
                     break;
                 case SDN_WISE_CNF_ID_CNT_REPORT_MAX:
+					log(" SDN_WISE_CNF_ID_CNT_REPORT_MAX: " + value);
                     cnt_report_max = value;
+					SDN_WISE_NEW_CNT_REPORT_MAX = value;
                     break;
                 case SDN_WISE_CNF_ID_CNT_UPDTABLE_MAX:
                     cnt_updtable_max = value;
@@ -386,8 +391,12 @@ public abstract class AbstractMote extends AbstractApplicationMote {
                 case SDN_WISE_CNF_REMOVE_FUNCTION:
                     functions.remove(value);
                     break;
-				case SDN_WISE_CNF_SOURCE_SETUP:
-					log("PERFIL DE GERACAO " + value);
+				case SDN_WISE_CNF_SOURCE_SETUP:		
+					int h = packet.getPayloadAt(4);
+					if(h<0)
+						h = ((-1*packet.getPayloadAt(4))^255)+1; 
+					int t = (packet.getPayloadAt(3) << 8) + h;
+					log("PERFIL DE GERACAO " + value + " || Tamanho do dado: " +  t );
 					break;
                 default:
                     break;
@@ -482,6 +491,16 @@ public abstract class AbstractMote extends AbstractApplicationMote {
 
             if ((cntReport) >= cnt_report_max) {
                 cntReport = 0;
+				if( ++cntReportSent == 4 && !pathActive ) {
+
+					if(SDN_WISE_NEW_CNT_REPORT_MAX != 0)
+						cnt_report_max = SDN_WISE_NEW_CNT_REPORT_MAX*2;
+					else
+						cnt_report_max = SDN_WISE_DFLT_CNT_REPORT_MAX*2;
+					log(" @@@@UPDATE REPORT INTERVAL TIME" + cnt_report_max );
+
+				}
+				log(" @@@@ENVIA REPORT " + pathActive + " " + cntReportSent + " " + cnt_report_max);
                 controllerTX(prepareReport());
             }
 
@@ -538,12 +557,19 @@ public abstract class AbstractMote extends AbstractApplicationMote {
         }
     }
 
-    private void rxOpenPath(OpenPathPacket opp) {
-        if (isAcceptedIdPacket(opp)) {
+    private void rxOpenPath(OpenPathPacket opp) {        
+		if (isAcceptedIdPacket(opp)) {
             List<NodeAddress> path = opp.getPath();
             for (int i = 0; i < path.size(); i++) {
                 NodeAddress actual = path.get(i);
                 if (isAcceptedIdAddress(actual)) {
+                    if(SDN_WISE_NEW_CNT_REPORT_MAX != 0)
+                        cnt_report_max = SDN_WISE_NEW_CNT_REPORT_MAX;
+                    else
+                        cnt_report_max = SDN_WISE_DFLT_CNT_REPORT_MAX;
+					pathActive=true;
+
+					log(" @@@@UPDATE REPORT INTERVAL TIME ON OPENPATH" + cnt_report_max );
                 	/* 
 						When an OpenPath is received, there may be to rules to be added. 
 						This will happen when the mote is located among the source and the destination.
@@ -625,6 +651,13 @@ public abstract class AbstractMote extends AbstractApplicationMote {
 
                 NodeAddress actual = path.get(i);
                 if (isAcceptedIdAddress(actual)) {
+                    if(SDN_WISE_NEW_CNT_REPORT_MAX != 0)
+                        cnt_report_max = SDN_WISE_NEW_CNT_REPORT_MAX*2;
+                    else
+                        cnt_report_max = SDN_WISE_DFLT_CNT_REPORT_MAX*2;
+					pathActive=false;
+
+                    log(" @@@@UPDATE REPORT INTERVAL TIME ON OPENPATH" + cnt_report_max );
                     /* 
                         When an OpenPath is received, there may be to rules to be added. 
                         This will happen when the mote is located among the source and the destination.
@@ -637,7 +670,6 @@ public abstract class AbstractMote extends AbstractApplicationMote {
 				   		log("***********************Clean pos1 " + actual.toString());
                         log("***********************removinf on index  " + remove_rule_index++ );
                         flowTable.set(remove_rule_index, new FlowTableEntry());
-
                     }
 
                     //This adds rules for all but the last mote.
@@ -656,6 +688,7 @@ public abstract class AbstractMote extends AbstractApplicationMote {
 
     		}
 		//}
+		log("***********************clearTable END ******************* " +  flowTable.isEmpty() );
 	}
 
     private int searchRule(FlowTableEntry rule) {

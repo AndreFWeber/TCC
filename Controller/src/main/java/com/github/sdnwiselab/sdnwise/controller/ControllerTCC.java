@@ -52,7 +52,7 @@ public class ControllerTCC extends Controller {
 
     LinkedList<String> nodesID = new LinkedList<>();
     private final Vector<LinkedList<NodeAddress>> pathVector = new Vector<>(2); // N here isn't really needed, but it sets the initial capacity of the vector
-    private int BATTERY_MINIMUM_THRESHOLD = 230;
+    private int BATTERY_MINIMUM_THRESHOLD = 100;
 
     /*
      * Constructor method fo ControllerDijkstra.
@@ -61,8 +61,8 @@ public class ControllerTCC extends Controller {
      * @param lower Lower Adpater object.
      * @param networkGraph NetworkGraph object.
      */
-    public ControllerTCC(Adapter lower, NetworkGraph networkGraph) {
-        super(lower, networkGraph);
+    public ControllerTCC(Adapter lower, NetworkGraph networkGraph, String type) {
+        super(lower, networkGraph, type);
         this.dijkstra = new Dijkstra(Dijkstra.Element.EDGE, null, "length");
     }
 
@@ -189,7 +189,7 @@ public class ControllerTCC extends Controller {
                         LinkedList<NodeAddress> activePath = active_paths.get(addr);
                         //if(activePath==null);
                         //System.out.println("3- "+ activePath.toString() + " " + pathVector.get(index).toString());
-                        for (NodeAddress na : activePath){
+                        for (NodeAddress na : activePath) {
                             if(pathVector.get(index).contains(na)){
                                 pathMatch = true;
                                 pathMatchIndex=index;
@@ -293,7 +293,7 @@ public class ControllerTCC extends Controller {
     }
     
     @Override
-    public final void TCC_manageRoutingRequest(NetworkPacket data, NetworkGraph _networkGraph, boolean SendDataBack) {
+    public final void TCC_manageRoutingRequest_disjoint(NetworkPacket data, NetworkGraph _networkGraph, boolean SendDataBack) {
         NetworkGraph tmp_networkGraph = new NetworkGraph(_networkGraph.getTimeout(), _networkGraph.getRssiResolution());;
         tmp_networkGraph.copy(_networkGraph);
         
@@ -327,7 +327,7 @@ public class ControllerTCC extends Controller {
                         pathVector.add(path);
                     }
                 if (path.size() > 1 && path.size() > 2) {
-                    TCC_manageRoutingRequest(data, tmp_networkGraph, SendDataBack);
+                    TCC_manageRoutingRequest_disjoint(data, tmp_networkGraph, SendDataBack);
                 } else {
                     System.out.println("FIM____________________________________ FROM:" + source + " To: " + destination + " ");
                     this.paths.put(data.getDst(), pathVector);
@@ -373,7 +373,7 @@ public class ControllerTCC extends Controller {
                     
                     p.setPayload("Veryfing if path is OK :D".getBytes(Charset.forName("UTF-8")));
                     System.out.println(">>>>>>>> :0 " + index.toString());
-                    TCC_manageRoutingRequest(p, networkGraph, false);
+                    TCC_manageRoutingRequest_disjoint(p, networkGraph, false);
                     System.out.println("/////~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~CHECK PATH");
 
                 }
@@ -384,6 +384,69 @@ public class ControllerTCC extends Controller {
     
     @Override
     public void setupNetwork() {
+    }
+
+    @Override
+    public void TCC_manageRoutingRequest_Negative_Reward(NetworkPacket data, NetworkGraph _networkGraph, boolean SendDataBack) {
+        NetworkGraph tmp_networkGraph = new NetworkGraph(_networkGraph.getTimeout(), _networkGraph.getRssiResolution());
+        tmp_networkGraph.copy(_networkGraph);
+        
+        String destination = data.getNetId() + "." + data.getDst();
+        String source = data.getNetId() + "." + data.getSrc();
+
+        if (!source.equals(destination)) {
+            Node sourceNode =  tmp_networkGraph.getNode(source);
+            Node destinationNode = tmp_networkGraph.getNode(destination);
+            LinkedList<NodeAddress> path = null;
+
+            if (sourceNode != null && destinationNode != null) {
+                    results.clear();
+                    dijkstra.init(tmp_networkGraph.getGraph());
+                    dijkstra.setSource(tmp_networkGraph.getNode(source));
+                    dijkstra.compute();
+                    lastSource = source;
+                    lastModification = tmp_networkGraph.getLastModification();
+
+                    path = new LinkedList<>();
+                    for (Node node : dijkstra.getPathNodes(tmp_networkGraph.getNode(destination))) {
+                        path.push((NodeAddress) node.getAttribute("nodeAddress"));
+                        if(!node.getAttribute("nodeAddress").equals(data.getDst()) && !node.getAttribute("nodeAddress").equals(data.getSrc())){
+                           nodesID.push(node.getId());
+                           tmp_networkGraph.removeNode(node);
+                        }
+                    }
+                    if(path.size()>0){
+                        System.out.println("[CTRL]: " + path);
+                        results.put(data.getDst(), path);      
+                        pathVector.add(path);
+                    }
+                if (path.size() > 1 && path.size() > 2) {
+                    TCC_manageRoutingRequest_disjoint(data, tmp_networkGraph, SendDataBack);
+                } else {
+                    System.out.println("FIM____________________________________ FROM:" + source + " To: " + destination + " ");
+                    this.paths.put(data.getDst(), pathVector);
+                    //pathVector.clear();
+                    nodesID.clear();
+                    path = findBestPath(0, data);
+                    if(path != null){
+                        System.out.println("*******************SENDING PATH******************");
+                        pathChecker();
+                        
+                        sendPath((byte) data.getNetId(), path.getFirst(), path);
+                        if(SendDataBack){
+                            data.unsetRequestFlag();
+                            data.setSrc(getSinkAddress());
+                            sendNetworkPacket(data);
+                        }
+                    } else {
+                        System.out.println("PATH NULL o.0 Ele manteve o caminho... :D ");
+                    }
+
+                    // TODO send a rule in order to say "wait I dont have a path"
+                    //sendMessage(data.getNetId(), data.getDst(),(byte) 4, new byte[10]);
+                }
+            }
+        }    
     }
 
 

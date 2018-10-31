@@ -71,9 +71,10 @@ public class ControllerFactory {
         switch (type) {
             case "DIJKSTRA":
                 return new ControllerDijkstra(adapt, ng);
-            case "TCC":
-                ControllerTCC c = new ControllerTCC(adapt, ng);
-                c.config_source(conf.getAlgorithm().get("CHECK_INTERVAL"), conf.getAlgorithm().get("SOURCE_NODE_ID"), conf.getAlgorithm().get("PERFIL"));
+            case "TCC_Negative_Reward":
+            case "TCC_Disjoint_Path":
+                ControllerTCC c = new ControllerTCC(adapt, ng, type);
+                c.config_source(conf.getAlgorithm().get("CHECK_INTERVAL"), conf.getAlgorithm().get("SOURCE_NODE_ID"), conf.getAlgorithm().get("DISTRIBUTION"), conf.getAlgorithm().get("DATA_SIZE_BYTES"));
                 return c;
                 //return new ControllerTCC(adapt, ng);
             default:

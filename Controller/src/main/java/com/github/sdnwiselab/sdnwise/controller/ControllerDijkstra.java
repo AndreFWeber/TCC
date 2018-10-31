@@ -47,7 +47,7 @@ public class ControllerDijkstra extends Controller {
      * @param networkGraph NetworkGraph object.
      */
     public ControllerDijkstra(Adapter lower, NetworkGraph networkGraph) {
-        super(lower, networkGraph);
+        super(lower, networkGraph, "ControllerDijkstra");
         this.dijkstra = new Dijkstra(Dijkstra.Element.EDGE, null, "length");
     }
 
@@ -109,7 +109,7 @@ public class ControllerDijkstra extends Controller {
     }
     
     @Override
-    public void TCC_manageRoutingRequest(NetworkPacket data, NetworkGraph _networkGraph, boolean SendDataBack) {
+    public void TCC_manageRoutingRequest_disjoint(NetworkPacket data, NetworkGraph _networkGraph, boolean SendDataBack) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
@@ -119,7 +119,8 @@ public class ControllerDijkstra extends Controller {
     }
 
     @Override
-    public void config_source(String interval, String source_node_IDs) {
+    public void TCC_manageRoutingRequest_Negative_Reward(NetworkPacket data, NetworkGraph _networkGraph, boolean SendDataBack) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
+
 }

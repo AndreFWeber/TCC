@@ -142,7 +142,9 @@ public interface ControllerInterface {
      * @param data NetworkPacket will be managed.
      */
     void manageRoutingRequest(NetworkPacket data);
-    void TCC_manageRoutingRequest(NetworkPacket data, NetworkGraph _networkGraph, boolean SendDataBack);
+    void TCC_manageRoutingRequest_disjoint(NetworkPacket data, NetworkGraph _networkGraph, boolean SendDataBack);
+    void TCC_manageRoutingRequest_Negative_Reward(NetworkPacket data, NetworkGraph _networkGraph, boolean SendDataBack);
+
     //void clearFlowtable(NetworkPacket data);
     void clearFlowtable(byte netId, NodeAddress addr/*,  NetworkPacket data*/);
 //    void config_source(String interval, String source_node_IDs);

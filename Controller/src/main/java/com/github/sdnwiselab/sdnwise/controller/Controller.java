@@ -69,6 +69,10 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
 
     final static int SDN_WISE_RLS_MAX = 16;
     final static int RESPONSE_TIMEOUT = 250;
+    
+    private String CONTROLLER_TYPE; 
+
+
 
     private final Adapter lower;
     final Scanner scanner;
@@ -79,6 +83,8 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
     final HashMap<NodeAddress, LinkedList<NodeAddress>> results;
 
     protected Map<NodeAddress, Integer> nodesBattery = new HashMap<NodeAddress, Integer>();
+    
+    protected Map<String, Integer> WEIGHT_ATTRIBUTE = new HashMap<String, Integer>();
 
     private boolean isStopped;
     private final ArrayBlockingQueue<NetworkPacket> bQ;
@@ -91,7 +97,8 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
 
     protected String[] network_source_ids;
     protected int CHECK_INTERVAL; 
-    protected int perfil_source;
+    protected String distribution_source;
+    protected int data_bytes;
     
     public NodeAddress getSinkAddress() {
         return sinkAddress;
@@ -104,7 +111,7 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
      * @param lower Lower Adpater object.
      * @param networkGraph NetworkGraph object.
      */
-    Controller(Adapter lower, NetworkGraph networkGraph) {
+    Controller(Adapter lower, NetworkGraph networkGraph, String type) {
         this.lower = lower;
         bQ = new ArrayBlockingQueue<>(1000);
         this.networkGraph = networkGraph;
@@ -115,25 +122,31 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
         scanner = new Scanner(System.in, "UTF-8");
         isStopped = false;
         sinkAddress = new NodeAddress("0.1");
+        CONTROLLER_TYPE = type;
     }
     
     //    @Override
-    public void config_source(String interval, String source_node_IDs, String perfil) {
+    public void config_source(String interval, String source_node_IDs, String distribution, String dataSizeBytes) {
         network_source_ids = source_node_IDs.split(" ");
         CHECK_INTERVAL = Integer.parseInt(interval);
-        perfil_source = Integer.parseInt(perfil);
-        System.out.println(";;;;;;;;;;;;;;;;;;;;;;;" + network_source_ids[0] + " legth" + network_source_ids.length + " CHECK_INTERVAL " + CHECK_INTERVAL);
+        distribution_source = distribution;
+        data_bytes = Integer.parseInt(dataSizeBytes);
     }
     
     public void managePacket(NetworkPacket data) {
         switch (data.getType()) {
             case SDN_WISE_REPORT:
                 //System.out.println("IN <<<<<<<<<<<< SDN_WISE_REPORT");
-                ReportPacket pkt = new ReportPacket(data);
+                 ReportPacket pkt = new ReportPacket(data);
+
+                this.nodesBattery.put(pkt.getSrc(), pkt.getBatt());
                 
+                this.WEIGHT_ATTRIBUTE.put(pkt.getNetId()+"."+pkt.getSrc().toString(), pkt.getBatt());
+                System.out.println("ADDING " + pkt.getNetId()+"."+pkt.getSrc().toString());
+                networkGraph.extraAttributesHandler("Battery", this.WEIGHT_ATTRIBUTE);
+
                 networkGraph.updateMap(pkt, -1);
                 
-                this.nodesBattery.put(pkt.getSrc(), pkt.getBatt());
                 //System.out.println(pkt.getSrc().toString() + " <<<<<<<<<<<< SDN_WISE_REPORT" + pkt.getBatt());
 
                 int src_addr = Math.round(Float.parseFloat(pkt.getSrc().toString()) * 100);
@@ -152,7 +165,7 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
                 
                 for(int sindex=0; sindex<network_source_ids.length;sindex++){
                     if(network_source_ids[sindex].equals(pkt.getSrc().toString())){
-                        sendSourceConfig(data.getNetId(), pkt.getSrc(), (byte)perfil_source);
+                        sendSourceConfig(data.getNetId(), pkt.getSrc(), distribution_source, data_bytes);
                     }
                 }
                    
@@ -218,15 +231,18 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
                     if (t == 90) {
                         System.out.println("\n\nCLUSTER 0::::::::::::::::::::::::::::::::::::::::::::::::::: NODE " + data.getDst());
 
-                        TCC_manageRoutingRequest(data, cluster0_networkGraph);
+                        TCC_manageRoutingRequest_disjoint(data, cluster0_networkGraph);
                     } else {
                         System.out.println("\n\nCLUSTER 1::::::::::::::::::::::::::::::::::::::::::::::::::: NODE " + data.getDst());
 
-                        TCC_manageRoutingRequest(data, cluster1_networkGraph);
+                        TCC_manageRoutingRequest_disjoint(data, cluster1_networkGraph);
                     }*/
-                   // manageRoutingRequest(data);
-                   System.out.println("\n\nINICIO____________________________________ FROM:" +  data.getSrc() + " To: " +  data.getDst() + " ");
-                   TCC_manageRoutingRequest(data, networkGraph, true);
+                    // manageRoutingRequest(data);
+                    System.out.println("\n\nINICIO____________________________________ FROM:" +  data.getSrc() + " To: " +  data.getDst() + " ");
+                    if(CONTROLLER_TYPE.equals("TCC_Disjoint_Path"))
+                        TCC_manageRoutingRequest_disjoint(data, networkGraph, true);
+                    else if(CONTROLLER_TYPE.equals("TCC_Negative_Reward"))
+                        TCC_manageRoutingRequest_Negative_Reward(data, networkGraph, true);
                 }
                 break;
         }
@@ -248,8 +264,6 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
             try {
                 bQ.put(new NetworkPacket((byte[]) arg));
             } catch (InterruptedException ex) {
-                System.out.println("OBSERVER AQUI");
-
                 log(Level.SEVERE, ex.getMessage());
             }
         } else if (o.equals(networkGraph)) {
@@ -289,8 +303,7 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
      * @param path the list of all the NodeAddresses in the path.
      */
     @Override
-    public final void sendPath(byte netId, NodeAddress destination,
-            List<NodeAddress> path) {
+    public final void sendPath(byte netId, NodeAddress destination, List<NodeAddress> path) {
         OpenPathPacket op = new OpenPathPacket(netId, sinkAddress, destination);
         op.setPath(path)
                 .setNxhop(sinkAddress);
@@ -308,15 +321,19 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
         sendNetworkPacket(op);
     }
     
-    public final void sendSourceConfig(int netId, NodeAddress destination, byte perfil) {
-
+    public final void sendSourceConfig(int netId, NodeAddress destination, String distribution, int dataSize) {
+            byte d = 0;
             ConfigPacket cp = new ConfigPacket(netId, sinkAddress, destination);
-
-            byte pl[] = {(byte)(18 | (1<<7)), 0, perfil};
+            
+            if(distribution.equals("CBR"))
+                d = 1;
+            
+            byte pl[] = {(byte)(18 | (1<<7)), 0, d, (byte) (dataSize >> 8), (byte) dataSize};
             cp.setPayload(pl)
               .setNxhop(sinkAddress);
             System.out.println("-----sendSourceConfig--------"+ cp.toString());            
             sendNetworkPacket(cp);
+            
     }
     
     /**
