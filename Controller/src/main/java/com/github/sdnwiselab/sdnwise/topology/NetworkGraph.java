@@ -222,7 +222,6 @@ public class NetworkGraph extends Observable {
         
         while(node_itr.hasNext()) {
             Node thisNode = (Node)node_itr.next();
-            //System.out.println(thisNode.getId() + "<<<<<<<<<<NODE ");
                                       
             Node node = this.addNode(thisNode.getId());
             this.setupNode(node, thisNode.getAttribute("battery"), thisNode.getAttribute("lastSeen"), thisNode.getAttribute("netId"), thisNode.getAttribute("nodeAddress"));
@@ -233,7 +232,9 @@ public class NetworkGraph extends Observable {
                 Edge thisEdge = (Edge)edge_itr.next();
                 Edge edge = this.addEdge(thisEdge.getId(), thisEdge.getSourceNode().toString(), thisEdge.getTargetNode().toString(), true);
                 this.setupEdge(edge, thisEdge.getAttribute("length"));
-               // System.out.println("PORRAA>>>>>>>>>>>>>>>>>>> " + thisEdge.toString() + " "+thisEdge.getSourceNode().toString() + " " + thisEdge.getTargetNode());
+                if(thisEdge.getAttribute("Battery") != null){
+                    edge.addAttribute("Battery", (Integer)thisEdge.getAttribute("Battery"));
+                }
             }
         }
             lastModification = n.getLastModification();
@@ -265,14 +266,19 @@ public class NetworkGraph extends Observable {
     void updateEdge(Edge edge, int newLen) {
         edge.addAttribute("length", newLen);
     }
+    
+    void updateEdgeExtraAttribute(Edge edge) {
+    }
 
-    public void extraAttributesHandler(String attribute, Map<String, Integer> battery){
+    public void extraAttributesHandler(String attribute, Map<String, Integer> battery) {
         for (Edge e : graph.getEachEdge()) {
-            if(battery.containsKey(e.getNode0().getId()) && battery.containsKey(e.getNode1().getId())){
-                e.addAttribute(attribute, battery.get(e.getNode0().getId())+battery.get(e.getNode1().getId()));
+            if(battery.containsKey(e.getNode0().getId()) && battery.containsKey(e.getNode1().getId())) {
+                e.addAttribute(attribute, (battery.get(e.getNode0().getId()) + battery.get(e.getNode1().getId())));
+                updateEdgeExtraAttribute(e);
             }
         }
     }
+
     
     public <T extends Node> T addNode(String id) {
         return graph.addNode(id);

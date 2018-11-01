@@ -30,6 +30,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
 import org.graphstream.algorithm.Dijkstra;
+import org.graphstream.graph.Edge;
 import org.graphstream.graph.Node;
 
 /**
@@ -50,7 +51,6 @@ public class ControllerTCC extends Controller {
     protected Map<NodeAddress, Vector<LinkedList<NodeAddress>> > paths = new HashMap<NodeAddress, Vector<LinkedList<NodeAddress>> >();
     protected Map<NodeAddress, LinkedList<NodeAddress> > active_paths = new HashMap<NodeAddress, LinkedList<NodeAddress> >();
 
-    LinkedList<String> nodesID = new LinkedList<>();
     private final Vector<LinkedList<NodeAddress>> pathVector = new Vector<>(2); // N here isn't really needed, but it sets the initial capacity of the vector
     private int BATTERY_MINIMUM_THRESHOLD = 100;
 
@@ -63,7 +63,17 @@ public class ControllerTCC extends Controller {
      */
     public ControllerTCC(Adapter lower, NetworkGraph networkGraph, String type) {
         super(lower, networkGraph, type);
-        this.dijkstra = new Dijkstra(Dijkstra.Element.EDGE, null, "length");
+        switch (type) {
+            case "TCC_Negative_Reward":
+                System.out.println("BATERIAAAAAAAAAAAAAAA");
+                this.dijkstra = new Dijkstra(Dijkstra.Element.EDGE, null, "Battery");
+                break;
+            case "DIJKSTRA":
+            case "TCC_Disjoint_Path":
+            default:
+                this.dijkstra = new Dijkstra(Dijkstra.Element.EDGE, null, "length");
+                break;
+        }
     }
 
     @Override
@@ -317,7 +327,6 @@ public class ControllerTCC extends Controller {
                     for (Node node : dijkstra.getPathNodes(tmp_networkGraph.getNode(destination))) {
                         path.push((NodeAddress) node.getAttribute("nodeAddress"));
                         if(!node.getAttribute("nodeAddress").equals(data.getDst()) && !node.getAttribute("nodeAddress").equals(data.getSrc())){
-                           nodesID.push(node.getId());
                            tmp_networkGraph.removeNode(node);
                         }
                     }
@@ -332,7 +341,6 @@ public class ControllerTCC extends Controller {
                     System.out.println("FIM____________________________________ FROM:" + source + " To: " + destination + " ");
                     this.paths.put(data.getDst(), pathVector);
                     //pathVector.clear();
-                    nodesID.clear();
                     path = findBestPath(0, data);
                     if(path != null){
                         System.out.println("*******************SENDING PATH******************");
@@ -390,7 +398,7 @@ public class ControllerTCC extends Controller {
     public void TCC_manageRoutingRequest_Negative_Reward(NetworkPacket data, NetworkGraph _networkGraph, boolean SendDataBack) {
         NetworkGraph tmp_networkGraph = new NetworkGraph(_networkGraph.getTimeout(), _networkGraph.getRssiResolution());
         tmp_networkGraph.copy(_networkGraph);
-        
+                
         String destination = data.getNetId() + "." + data.getDst();
         String source = data.getNetId() + "." + data.getSrc();
 
@@ -406,13 +414,21 @@ public class ControllerTCC extends Controller {
                     dijkstra.compute();
                     lastSource = source;
                     lastModification = tmp_networkGraph.getLastModification();
-
+                    
                     path = new LinkedList<>();
                     for (Node node : dijkstra.getPathNodes(tmp_networkGraph.getNode(destination))) {
                         path.push((NodeAddress) node.getAttribute("nodeAddress"));
+                        //Map<String, Integer> nBatteryWeight = new HashMap<String, Integer>();
+
                         if(!node.getAttribute("nodeAddress").equals(data.getDst()) && !node.getAttribute("nodeAddress").equals(data.getSrc())){
-                           nodesID.push(node.getId());
-                           tmp_networkGraph.removeNode(node);
+                            Node n = tmp_networkGraph.getNode(node.getId());
+                            for (Edge e : n.getEachEdge()) {
+                                System.out.println("EDGE - "+e.getNode0().getId() + " " + e.getNode1().getId());
+                                if(e.getAttribute("Battery")!=null){
+                                    e.setAttribute("Battery", (Integer)e.getAttribute("Battery")*100);
+                                    System.out.println("SET BATTERY " + e.getAttribute("Battery"));
+                                }
+                            }
                         }
                     }
                     if(path.size()>0){
@@ -426,7 +442,6 @@ public class ControllerTCC extends Controller {
                     System.out.println("FIM____________________________________ FROM:" + source + " To: " + destination + " ");
                     this.paths.put(data.getDst(), pathVector);
                     //pathVector.clear();
-                    nodesID.clear();
                     path = findBestPath(0, data);
                     if(path != null){
                         System.out.println("*******************SENDING PATH******************");

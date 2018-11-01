@@ -76,6 +76,12 @@ public final class VisualNetworkGraph extends NetworkGraph {
     }
 
     @Override
+    void updateEdgeExtraAttribute(Edge edge) {
+        super.updateEdgeExtraAttribute(edge);
+        edge.addAttribute("ui.label", (Integer)edge.getAttribute("Battery"));
+    }
+    
+    @Override
     void updateEdge(Edge edge, int newLen) {
         super.updateEdge(edge, newLen);
         int w = 30 + Math.min((((Math.max(255 - newLen, 180)) - 180) * 3), 255);

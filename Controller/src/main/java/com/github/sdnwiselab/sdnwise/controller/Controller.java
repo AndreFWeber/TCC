@@ -115,8 +115,8 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
         this.lower = lower;
         bQ = new ArrayBlockingQueue<>(1000);
         this.networkGraph = networkGraph;
-        this.cluster0_networkGraph = new VisualNetworkGraph(networkGraph.getTimeout(), networkGraph.getRssiResolution());
-        this.cluster1_networkGraph = new VisualNetworkGraph(networkGraph.getTimeout(), networkGraph.getRssiResolution());
+        //this.cluster0_networkGraph = new VisualNetworkGraph(networkGraph.getTimeout(), networkGraph.getRssiResolution());
+        //this.cluster1_networkGraph = new VisualNetworkGraph(networkGraph.getTimeout(), networkGraph.getRssiResolution());
 
         results = new HashMap<>();
         scanner = new Scanner(System.in, "UTF-8");
@@ -141,8 +141,7 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
 
                 this.nodesBattery.put(pkt.getSrc(), pkt.getBatt());
                 
-                this.WEIGHT_ATTRIBUTE.put(pkt.getNetId()+"."+pkt.getSrc().toString(), pkt.getBatt());
-                System.out.println("ADDING " + pkt.getNetId()+"."+pkt.getSrc().toString());
+                this.WEIGHT_ATTRIBUTE.put(pkt.getNetId()+"."+pkt.getSrc().toString(), 255-pkt.getBatt());
                 networkGraph.extraAttributesHandler("Battery", this.WEIGHT_ATTRIBUTE);
 
                 networkGraph.updateMap(pkt, -1);
@@ -150,7 +149,7 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
                 //System.out.println(pkt.getSrc().toString() + " <<<<<<<<<<<< SDN_WISE_REPORT" + pkt.getBatt());
 
                 int src_addr = Math.round(Float.parseFloat(pkt.getSrc().toString()) * 100);
-
+/*
                 if (pkt.getSrc().toString().equals("0.1")) 
                 {
                     cluster0_networkGraph.updateMap(pkt, 0);
@@ -162,7 +161,7 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
                         cluster0_networkGraph.updateMap(pkt, 0);
                     }
                 }
-                
+*/
                 for(int sindex=0; sindex<network_source_ids.length;sindex++){
                     if(network_source_ids[sindex].equals(pkt.getSrc().toString())){
                         sendSourceConfig(data.getNetId(), pkt.getSrc(), distribution_source, data_bytes);
