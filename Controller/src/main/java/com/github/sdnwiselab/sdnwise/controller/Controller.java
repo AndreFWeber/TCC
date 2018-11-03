@@ -70,7 +70,7 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
     final static int SDN_WISE_RLS_MAX = 16;
     final static int RESPONSE_TIMEOUT = 250;
     
-    private String CONTROLLER_TYPE; 
+    protected String CONTROLLER_TYPE; 
 
 
 

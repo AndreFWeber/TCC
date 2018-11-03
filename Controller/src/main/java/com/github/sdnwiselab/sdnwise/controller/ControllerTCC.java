@@ -44,7 +44,7 @@ import org.graphstream.graph.Node;
  */
 public class ControllerTCC extends Controller {
 
-    private final boolean DEBUG_PRINT = true;
+    private final boolean DEBUG_PRINT = false;
     private final Dijkstra dijkstra;
     private String lastSource = "";
     private long lastModification = -1;
@@ -65,7 +65,6 @@ public class ControllerTCC extends Controller {
         super(lower, networkGraph, type);
         switch (type) {
             case "TCC_Negative_Reward":
-                System.out.println("BATERIAAAAAAAAAAAAAAA");
                 this.dijkstra = new Dijkstra(Dijkstra.Element.EDGE, null, "Battery");
                 break;
             case "DIJKSTRA":
@@ -372,7 +371,7 @@ public class ControllerTCC extends Controller {
         TimerTask timerTask = new TimerTask() {
             @Override
             public void run() {
-                System.out.println("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~CHECK PATH " + active_paths.toString());
+                System.out.println("\n\n\nCHECK PATH " + active_paths.toString());
                 for (Iterator it = active_paths.keySet().iterator(); it.hasNext();) {
                     NodeAddress index = (NodeAddress)it.next();
                     
@@ -380,10 +379,10 @@ public class ControllerTCC extends Controller {
                     p.setNxhop(getSinkAddress());
                     
                     p.setPayload("Veryfing if path is OK :D".getBytes(Charset.forName("UTF-8")));
-                    System.out.println(">>>>>>>> :0 " + index.toString());
-                    TCC_manageRoutingRequest_disjoint(p, networkGraph, false);
-                    System.out.println("/////~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~CHECK PATH");
-
+                    if(CONTROLLER_TYPE.equals("TCC_Disjoint_Path"))
+                        TCC_manageRoutingRequest_disjoint(p, networkGraph, false);
+                    else if(CONTROLLER_TYPE.equals("TCC_Negative_Reward"))
+                        TCC_manageRoutingRequest_Negative_Reward(p, networkGraph, false);
                 }
             }
         };
@@ -402,64 +401,86 @@ public class ControllerTCC extends Controller {
         String destination = data.getNetId() + "." + data.getDst();
         String source = data.getNetId() + "." + data.getSrc();
 
+        if(active_paths.containsKey(data.getSrc())){
+            System.out.println("Caminho atual: "+active_paths.get(data.getSrc()).toString());
+        }
+        
         if (!source.equals(destination)) {
             Node sourceNode =  tmp_networkGraph.getNode(source);
             Node destinationNode = tmp_networkGraph.getNode(destination);
             LinkedList<NodeAddress> path = null;
 
             if (sourceNode != null && destinationNode != null) {
-                    results.clear();
-                    dijkstra.init(tmp_networkGraph.getGraph());
-                    dijkstra.setSource(tmp_networkGraph.getNode(source));
-                    dijkstra.compute();
-                    lastSource = source;
-                    lastModification = tmp_networkGraph.getLastModification();
+                results.clear();
+                dijkstra.init(tmp_networkGraph.getGraph());
+                dijkstra.setSource(tmp_networkGraph.getNode(source));
+                dijkstra.compute();
+                lastSource = source;
+                lastModification = tmp_networkGraph.getLastModification();
                     
-                    path = new LinkedList<>();
-                    for (Node node : dijkstra.getPathNodes(tmp_networkGraph.getNode(destination))) {
-                        path.push((NodeAddress) node.getAttribute("nodeAddress"));
-                        //Map<String, Integer> nBatteryWeight = new HashMap<String, Integer>();
-
-                        if(!node.getAttribute("nodeAddress").equals(data.getDst()) && !node.getAttribute("nodeAddress").equals(data.getSrc())){
-                            Node n = tmp_networkGraph.getNode(node.getId());
+                path = new LinkedList<>();
+                for (Node node : dijkstra.getPathNodes(tmp_networkGraph.getNode(destination))) {
+                    path.push((NodeAddress) node.getAttribute("nodeAddress"));
+                    //Map<String, Integer> nBatteryWeight = new HashMap<String, Integer>();
+                }
+                if(path.size()>0){
+                    System.out.println("[CTRL]: " + path);
+                    int index=-1;
+                    for(NodeAddress naddress : path){
+                        index++;
+                        String id = data.getNetId() + "." + naddress.toString();
+                       // System.out.println("id "+id);
+                       // if(!naddress.toString().equals(data.getDst().toString()) && !naddress.toString().equals(data.getSrc().toString())){
+                            Node n = tmp_networkGraph.getNode(id);
+                            NodeAddress previous = (index>0)?path.get(index-1):null;
+                            NodeAddress next = (index<path.size()-1)?path.get(index+1):null;
                             for (Edge e : n.getEachEdge()) {
-                                System.out.println("EDGE - "+e.getNode0().getId() + " " + e.getNode1().getId());
-                                if(e.getAttribute("Battery")!=null){
-                                    e.setAttribute("Battery", (Integer)e.getAttribute("Battery")*100);
-                                    System.out.println("SET BATTERY " + e.getAttribute("Battery"));
+                                if(e.getAttribute("Battery")!=null)
+                                if(e.getNode1().getId().equals("1."+(previous!=null?previous.toString():"pnull")) ||
+                                   e.getNode1().getId().equals("1."+(next!=null?next.toString():"n null")) ||
+                                   e.getNode0().getId().equals("1."+(previous!=null?previous.toString():"pnull")) ||       
+                                   e.getNode0().getId().equals("1."+(next!=null?next.toString():"n null"))        
+                                ){
+                                   // System.out.println("BINGO "  + e.getNode0().getId() + " e "+  e.getNode1().getId());
+                                    if(e.getAttribute("Battery")!=null){
+                                        e.setAttribute("Battery", (Integer)e.getAttribute("Battery")*2);
+                                        //System.out.println("SET BATTERY " + e.getAttribute("Battery"));
+                                    }
                                 }
                             }
-                        }
+                       // }
                     }
-                    if(path.size()>0){
-                        System.out.println("[CTRL]: " + path);
+                    
+
+                    
+                    if (!pathVector.contains(path)) {
                         results.put(data.getDst(), path);      
                         pathVector.add(path);
-                    }
-                if (path.size() > 1 && path.size() > 2) {
-                    TCC_manageRoutingRequest_disjoint(data, tmp_networkGraph, SendDataBack);
-                } else {
-                    System.out.println("FIM____________________________________ FROM:" + source + " To: " + destination + " ");
-                    this.paths.put(data.getDst(), pathVector);
-                    //pathVector.clear();
-                    path = findBestPath(0, data);
-                    if(path != null){
-                        System.out.println("*******************SENDING PATH******************");
-                        pathChecker();
-                        
-                        sendPath((byte) data.getNetId(), path.getFirst(), path);
-                        if(SendDataBack){
-                            data.unsetRequestFlag();
-                            data.setSrc(getSinkAddress());
-                            sendNetworkPacket(data);
-                        }
+                        TCC_manageRoutingRequest_Negative_Reward(data, tmp_networkGraph, SendDataBack);
                     } else {
-                        System.out.println("PATH NULL o.0 Ele manteve o caminho... :D ");
-                    }
+                        System.out.println("FIM____________________________________ FROM:" + source + " To: " + destination + " ");
+                        this.paths.put(data.getDst(), pathVector);
+                        //pathVector.clear();
+                        path = findBestPath(0, data);
+                        if(path != null){
+                            System.out.println("*******************SENDING PATH******************");
+                            pathChecker();
 
-                    // TODO send a rule in order to say "wait I dont have a path"
-                    //sendMessage(data.getNetId(), data.getDst(),(byte) 4, new byte[10]);
+                            sendPath((byte) data.getNetId(), path.getFirst(), path);
+                            if(SendDataBack){
+                                data.unsetRequestFlag();
+                                data.setSrc(getSinkAddress());
+                                sendNetworkPacket(data);
+                            }
+                        } else {
+                            System.out.println("PATH NULL o.0 Ele manteve o caminho... :D ");
+                        }
+
+                        // TODO send a rule in order to say "wait I dont have a path"
+                        //sendMessage(data.getNetId(), data.getDst(),(byte) 4, new byte[10]);
+                    }
                 }
+
             }
         }    
     }
