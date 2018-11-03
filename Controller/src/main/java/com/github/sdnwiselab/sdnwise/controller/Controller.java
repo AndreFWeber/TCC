@@ -100,6 +100,8 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
     protected String distribution_source;
     protected int data_bytes;
     
+    private int sendSourceData=0;
+    
     public NodeAddress getSinkAddress() {
         return sinkAddress;
     }
@@ -162,11 +164,13 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
                     }
                 }
 */
-                for(int sindex=0; sindex<network_source_ids.length;sindex++){
-                    if(network_source_ids[sindex].equals(pkt.getSrc().toString())){
-                        sendSourceConfig(data.getNetId(), pkt.getSrc(), distribution_source, data_bytes);
+                if(sendSourceData<4)
+                    for(int sindex=0; sindex<network_source_ids.length;sindex++){
+                        if(network_source_ids[sindex].equals(pkt.getSrc().toString())){
+                            sendSourceConfig(data.getNetId(), pkt.getSrc(), distribution_source, data_bytes);
+                            sendSourceData++;
+                        }
                     }
-                }
                    
                 break;
             case SDN_WISE_DATA:

@@ -52,7 +52,7 @@ public class ControllerTCC extends Controller {
     protected Map<NodeAddress, LinkedList<NodeAddress> > active_paths = new HashMap<NodeAddress, LinkedList<NodeAddress> >();
 
     private final Vector<LinkedList<NodeAddress>> pathVector = new Vector<>(2); // N here isn't really needed, but it sets the initial capacity of the vector
-    private int BATTERY_MINIMUM_THRESHOLD = 100;
+    private int BATTERY_MINIMUM_THRESHOLD = 240;
 
     /*
      * Constructor method fo ControllerDijkstra.

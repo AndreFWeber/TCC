@@ -52,6 +52,7 @@ import java.util.logging.*;
 import org.contikios.cooja.*;
 import org.contikios.cooja.interfaces.*;
 import org.contikios.cooja.motes.AbstractApplicationMote;
+import java.nio.charset.Charset;
 
 /**
  * Example SdnWise mote.
@@ -81,6 +82,10 @@ public abstract class AbstractMote extends AbstractApplicationMote {
 	private boolean pathActive = false;
     private int cntUpdTable = 0;
 	private int SDN_WISE_NEW_CNT_REPORT_MAX = 0;
+	private int SDN_WISE_NEW_CNT_BEACON_MAX = 0;
+
+	private boolean sourceMote = false;
+	private int sourceDataSize = 0;
 
     ApplicationRadio radio = null;
     ApplicationLED leds = null;
@@ -223,7 +228,13 @@ public abstract class AbstractMote extends AbstractApplicationMote {
             sentDataBytes += np.getPayloadSize();
         }
 
-        battery.transmitRadio(np.getLen());
+        if(!sourceMote)
+			battery.transmitRadio(np.getLen());
+
+        String controller_payoad = new String(np.getPayload(),Charset.forName("UTF-8"));
+
+
+
         np.decrementTtl();
         RadioPacket pk = new COOJARadioPacket(np.toByteArray());
         if (radio.isTransmitting() || radio.isReceiving()) {
@@ -231,6 +242,7 @@ public abstract class AbstractMote extends AbstractApplicationMote {
                     new MoteTimeEvent(this, 0) {
                         @Override
                         public void execute(long t) {
+
                             radioTX(np);
                         }
                     },
@@ -324,9 +336,9 @@ public abstract class AbstractMote extends AbstractApplicationMote {
                     break;
                 case SDN_WISE_CNF_ID_CNT_BEACON_MAX:
                     cnt_beacon_max = value;
+					SDN_WISE_NEW_CNT_BEACON_MAX = value;
                     break;
                 case SDN_WISE_CNF_ID_CNT_REPORT_MAX:
-					log(" SDN_WISE_CNF_ID_CNT_REPORT_MAX: " + value);
                     cnt_report_max = value;
 					SDN_WISE_NEW_CNT_REPORT_MAX = value;
                     break;
@@ -391,11 +403,14 @@ public abstract class AbstractMote extends AbstractApplicationMote {
                 case SDN_WISE_CNF_REMOVE_FUNCTION:
                     functions.remove(value);
                     break;
-				case SDN_WISE_CNF_SOURCE_SETUP:		
+				case SDN_WISE_CNF_SOURCE_SETUP:	
+					sourceMote=true;
+	
 					int h = packet.getPayloadAt(4);
 					if(h<0)
 						h = ((-1*packet.getPayloadAt(4))^255)+1; 
 					int t = (packet.getPayloadAt(3) << 8) + h;
+					sourceDataSize=t;
 					log("PERFIL DE GERACAO " + value + " || Tamanho do dado: " +  t );
 					break;
                 default:
@@ -454,6 +469,8 @@ public abstract class AbstractMote extends AbstractApplicationMote {
                         }
                     }
                     controllerTX(packetList);
+
+
                     break;
                 case SDN_WISE_CNF_GET_RULE_INDEX:
                     toBeSent = 0;
@@ -468,6 +485,8 @@ public abstract class AbstractMote extends AbstractApplicationMote {
                             .setPayloadAt(packet.getPayloadAt(1), 1)
                             .setPayloadAt(packet.getPayloadAt(2), 2);
                     controllerTX(packetRule);
+
+
                     break;
                 default:
                     break;
@@ -478,7 +497,9 @@ public abstract class AbstractMote extends AbstractApplicationMote {
 
     private void timerTask() {
         if (semaphore == 1 && battery.getBatteryLevel() > 0) {
-            battery.keepAlive(1);
+           
+	        if(!sourceMote)
+				battery.keepAlive(1);
 
             cntBeacon++;
             cntReport++;
@@ -486,6 +507,8 @@ public abstract class AbstractMote extends AbstractApplicationMote {
 
             if ((cntBeacon) >= cnt_beacon_max) {
                 cntBeacon = 0;
+
+
                 radioTX(prepareBeacon());
             }
 
@@ -499,6 +522,11 @@ public abstract class AbstractMote extends AbstractApplicationMote {
 						cnt_report_max = SDN_WISE_DFLT_CNT_REPORT_MAX*2;
 					log(" @@@@UPDATE REPORT INTERVAL TIME" + cnt_report_max );
 
+                    if(SDN_WISE_NEW_CNT_BEACON_MAX != 0)
+                        cnt_beacon_max = SDN_WISE_NEW_CNT_BEACON_MAX*2;
+                    else
+                        cnt_beacon_max = SDN_WISE_DFLT_CNT_BEACON_MAX*2;
+
 				}
 				log(" @@@@ENVIA REPORT " + pathActive + " " + cntReportSent + " " + cnt_report_max);
                 controllerTX(prepareReport());
@@ -508,6 +536,18 @@ public abstract class AbstractMote extends AbstractApplicationMote {
                 cntUpdTable = 0;
                 updateTable();
             }
+
+			
+			if(sourceMote && (cntReport%2==0)){
+                    DataPacket p = new DataPacket(1,addr, getActualSinkAddress());
+            	
+				    int i;
+				    String payload="";
+				    for(i=0;i<sourceDataSize;i++)
+				    	payload += "d";
+                    p.setPayload(payload.getBytes(Charset.forName("UTF-8")));
+		            runFlowMatch(p);
+			}
         }
         requestImmediateWakeup();
     }
@@ -567,6 +607,10 @@ public abstract class AbstractMote extends AbstractApplicationMote {
                         cnt_report_max = SDN_WISE_NEW_CNT_REPORT_MAX;
                     else
                         cnt_report_max = SDN_WISE_DFLT_CNT_REPORT_MAX;
+					if(SDN_WISE_NEW_CNT_BEACON_MAX != 0)
+                        cnt_beacon_max = SDN_WISE_NEW_CNT_BEACON_MAX;
+                    else
+                        cnt_beacon_max = SDN_WISE_DFLT_CNT_BEACON_MAX;
 					pathActive=true;
 
 					log(" @@@@UPDATE REPORT INTERVAL TIME ON OPENPATH" + cnt_report_max );
@@ -655,6 +699,10 @@ public abstract class AbstractMote extends AbstractApplicationMote {
                         cnt_report_max = SDN_WISE_NEW_CNT_REPORT_MAX*2;
                     else
                         cnt_report_max = SDN_WISE_DFLT_CNT_REPORT_MAX*2;
+                    if(SDN_WISE_NEW_CNT_BEACON_MAX != 0)
+                        cnt_beacon_max = SDN_WISE_NEW_CNT_BEACON_MAX*2;
+                    else
+                        cnt_beacon_max = SDN_WISE_DFLT_CNT_BEACON_MAX*2;
 					pathActive=false;
 
                     log(" @@@@UPDATE REPORT INTERVAL TIME ON OPENPATH" + cnt_report_max );
@@ -729,6 +777,8 @@ public abstract class AbstractMote extends AbstractApplicationMote {
 
             if (packet.isRequest()) {
                 controllerTX(packet);
+
+
             } else {
 //                log("##########################TYPE: "+ packet.getType() );
 
@@ -900,6 +950,7 @@ public abstract class AbstractMote extends AbstractApplicationMote {
                 case SDN_WISE_FORWARD_U:
                 case SDN_WISE_FORWARD_B:
                     np.setNxhop(((AbstractForwardAction) action).getNextHop());
+
                     radioTX(np);
                     break;
 
@@ -952,6 +1003,8 @@ public abstract class AbstractMote extends AbstractApplicationMote {
                             .setRequestFlag()
                             .setTtl(NetworkPacket.SDN_WISE_DFLT_TTL_MAX);
                     controllerTX(np);
+
+
                     break;
                 case SDN_WISE_MATCH:
                     flowTableQueue.add(np);
@@ -1138,7 +1191,8 @@ public abstract class AbstractMote extends AbstractApplicationMote {
             try {
                 while (battery.getBatteryLevel() > 0) {
                     NetworkPacket tmpPacket = flowTableQueue.take();
-                    battery.receiveRadio(tmpPacket.getLen());
+			        if(!sourceMote)
+ 	                   battery.receiveRadio(tmpPacket.getLen());
                     receivedBytes += tmpPacket.getLen();
                     rxHandler(tmpPacket, 255);
                 }
@@ -1155,6 +1209,7 @@ public abstract class AbstractMote extends AbstractApplicationMote {
             try {
                 while (true) {
                     NetworkPacket np = txQueue.take();
+
                     radioTX(np);
                 }
             } catch (InterruptedException ex) {

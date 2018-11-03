@@ -51,11 +51,20 @@ public class Mote extends AbstractMote {
     @Override
     public void SDN_WISE_Callback(DataPacket packet) {
         if (this.functions.get(1) == null) {
-            log(new String(packet.getPayload(),Charset.forName("UTF-8")));
+            String controller_payoad = new String(packet.getPayload(),Charset.forName("UTF-8"));
+			log("DADO RECEBIDO: " + controller_payoad);
+  
+			String answer2Controller = " ECHO TO CONTROLLER " + controller_payoad;
+            packet.setPayload(answer2Controller.getBytes(Charset.forName("UTF-8")));
+
+
+			//PARA REENVIAR ESSE PACOTE PRO CONTROLLER (ECHO!)
             packet.setSrc(addr)
                     .setDst(getActualSinkAddress())
                     .setTtl((byte) ttl_max);
+			
             runFlowMatch(packet);
+
         } else {
             this.functions.get(1).function(adcRegister,
                     flowTable,
@@ -105,6 +114,7 @@ public class Mote extends AbstractMote {
     @Override
     public final void controllerTX(NetworkPacket pck) {
         pck.setNxhop(getNextHopVsSink());
+
         radioTX(pck);
     }
 

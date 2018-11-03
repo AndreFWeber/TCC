@@ -25,6 +25,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -85,7 +86,7 @@ public class SdnWise {
         controller = SdnWise.this.startController("");
          
         System.out.println("SDN-WISE Controller running...." );
-        
+               
         // We wait for the network to start 
         try {
             Thread.sleep(70000);
@@ -103,6 +104,7 @@ public class SdnWise {
                     source=!source;
                     NodeAddress src = new NodeAddress(1);
                     DataPacket p = new DataPacket(netId,src,dst);
+                    
                     p.setNxhop(src);
                     //System.out.println("_______________________________quering node " + source);
 
