@@ -32,6 +32,7 @@ import java.util.Vector;
 import org.graphstream.algorithm.Dijkstra;
 import org.graphstream.graph.Edge;
 import org.graphstream.graph.Node;
+import org.graphstream.graph.Path;
 
 /**
  * This class implements the Controller class using the Dijkstra routing
@@ -52,8 +53,16 @@ public class ControllerTCC extends Controller {
     protected Map<NodeAddress, LinkedList<NodeAddress> > active_paths = new HashMap<NodeAddress, LinkedList<NodeAddress> >();
 
     private final Vector<LinkedList<NodeAddress>> pathVector = new Vector<>(2); // N here isn't really needed, but it sets the initial capacity of the vector
-    private int BATTERY_MINIMUM_THRESHOLD = 240;
+    private int BATTERY_MINIMUM_THRESHOLD = 250;
 
+    private Timer timer;
+    /*
+        NegativeRewardType = false -> utiliza handleRountingPath para manter um caminho em uso ate que o BATTERY_MINIMUM_THRESHOLD seja atingido por 
+    um dos modulo. 
+        NegativeRewardType = true -> balanceia os caminhos. i.e: Utiliza sempre o caminho com menor custo (Melhor nivel energetico)
+    */
+    private boolean NegativeRewardType = true; 
+            
     /*
      * Constructor method fo ControllerDijkstra.
      * 
@@ -126,12 +135,12 @@ public class ControllerTCC extends Controller {
     }
 
     /* 
-    *  Onde BEST nesse caso sera o menor caminho.
+    *  O menor caminho:
     *  Caso haja mais de um caminho com mesmo numero de modulos (ou saltos), o melhor caminha sera aquele em
     *  que os modulos possuem melhor nivel energetico. (i.e: A maior soma do nivel de bateria de todos os 
     *  modulos do path define o melhor caminho)
     */
-    private LinkedList<NodeAddress> findBestPath(int initialSize, NetworkPacket data){
+    private LinkedList<NodeAddress> handleRountingPath(int initialSize, NetworkPacket data){
         if(!this.pathVector.isEmpty()){
             LinkedList<NodeAddress> pathToSend = null;
 
@@ -262,8 +271,9 @@ public class ControllerTCC extends Controller {
                         if(numberOfHopsAvailable.isEmpty()){
                                 
                             System.out.println(" NO MORE PATHS AVAILABLE" );
+                            timer.cancel();
                         } else {
-                            findBestPath((Integer)numberOfHopsAvailable.get(0),  data);
+                            handleRountingPath((Integer)numberOfHopsAvailable.get(0),  data);
                         }
                     } else {
                         pathToSend = pathVector.get((Integer)shorterPathIndex.get(0));
@@ -279,7 +289,6 @@ public class ControllerTCC extends Controller {
             
             if(pathToSend != null){
                 active_paths.put(pathVector.get(0).getLast(), pathToSend);
-                System.out.println("PATH TO SEND" + pathToSend);
                 this.pathVector.clear();            
                 return pathToSend;
             }
@@ -340,7 +349,7 @@ public class ControllerTCC extends Controller {
                     System.out.println("FIM____________________________________ FROM:" + source + " To: " + destination + " ");
                     this.paths.put(data.getDst(), pathVector);
                     //pathVector.clear();
-                    path = findBestPath(0, data);
+                    path = handleRountingPath(0, data);
                     if(path != null){
                         System.out.println("*******************SENDING PATH******************");
                         pathChecker();
@@ -367,7 +376,7 @@ public class ControllerTCC extends Controller {
         if(pathCheckerOn)
            return;
         pathCheckerOn=true;
-        Timer timer = new Timer("MyTimer");//create a new Timer
+        timer = new Timer("MyTimer");//create a new Timer
         TimerTask timerTask = new TimerTask() {
             @Override
             public void run() {
@@ -423,46 +432,61 @@ public class ControllerTCC extends Controller {
                     path.push((NodeAddress) node.getAttribute("nodeAddress"));
                     //Map<String, Integer> nBatteryWeight = new HashMap<String, Integer>();
                 }
-                if(path.size()>0){
-                    System.out.println("[CTRL]: " + path);
-                    int index=-1;
-                    for(NodeAddress naddress : path){
-                        index++;
-                        String id = data.getNetId() + "." + naddress.toString();
-                       // System.out.println("id "+id);
-                       // if(!naddress.toString().equals(data.getDst().toString()) && !naddress.toString().equals(data.getSrc().toString())){
+                if(path.size()>0){                    
+
+                    if (!pathVector.contains(path)) {
+                        System.out.println("[CTRL]: " + path + " WEIGHT: "+ dijkstra.getPathLength(tmp_networkGraph.getNode(destination)) );
+                        int index = -1;
+                        for (NodeAddress naddress : path) {
+                            index++;
+                            String id = data.getNetId() + "." + naddress.toString();
+                            // System.out.println("id "+id);
+                            // if(!naddress.toString().equals(data.getDst().toString()) && !naddress.toString().equals(data.getSrc().toString())){
                             Node n = tmp_networkGraph.getNode(id);
-                            NodeAddress previous = (index>0)?path.get(index-1):null;
-                            NodeAddress next = (index<path.size()-1)?path.get(index+1):null;
+                            NodeAddress previous = (index > 0) ? path.get(index - 1) : null;
+                            NodeAddress next = (index < path.size() - 1) ? path.get(index + 1) : null;
                             for (Edge e : n.getEachEdge()) {
-                                if(e.getAttribute("Battery")!=null)
-                                if(e.getNode1().getId().equals("1."+(previous!=null?previous.toString():"pnull")) ||
-                                   e.getNode1().getId().equals("1."+(next!=null?next.toString():"n null")) ||
-                                   e.getNode0().getId().equals("1."+(previous!=null?previous.toString():"pnull")) ||       
-                                   e.getNode0().getId().equals("1."+(next!=null?next.toString():"n null"))        
-                                ){
-                                   // System.out.println("BINGO "  + e.getNode0().getId() + " e "+  e.getNode1().getId());
-                                    if(e.getAttribute("Battery")!=null){
-                                        e.setAttribute("Battery", (Integer)e.getAttribute("Battery")*2);
-                                        //System.out.println("SET BATTERY " + e.getAttribute("Battery"));
+                                if (e.getAttribute("Battery") != null) {
+                                    if (e.getNode1().getId().equals("1." + (previous != null ? previous.toString() : "pnull"))
+                                            || e.getNode1().getId().equals("1." + (next != null ? next.toString() : "n null"))
+                                            || e.getNode0().getId().equals("1." + (previous != null ? previous.toString() : "pnull"))
+                                            || e.getNode0().getId().equals("1." + (next != null ? next.toString() : "n null"))) {
+                                        // System.out.println("BINGO "  + e.getNode0().getId() + " e "+  e.getNode1().getId());
+                                        if (e.getAttribute("Battery") != null) {
+                                            e.setAttribute("Battery", (Integer) e.getAttribute("Battery") * 100);
+                                            //System.out.println("SET BATTERY " + e.getAttribute("Battery"));
+                                        }
                                     }
                                 }
                             }
-                       // }
-                    }
-                    
-
-                    
-                    if (!pathVector.contains(path)) {
+                            // }
+                        }
+                        
                         results.put(data.getDst(), path);      
                         pathVector.add(path);
                         TCC_manageRoutingRequest_Negative_Reward(data, tmp_networkGraph, SendDataBack);
-                    } else {
+                    } else {                        
                         System.out.println("FIM____________________________________ FROM:" + source + " To: " + destination + " ");
                         this.paths.put(data.getDst(), pathVector);
                         //pathVector.clear();
-                        path = findBestPath(0, data);
+
+                        /*
+                            handleRountingPath vai utilizar um caminho ate que a bateria de um dos modulos
+                            possua um nivel de bateria abaixo do minimo limiar definido por BATTERY_MINIMUM_THRESHOLD
+                        */
+                        if(!NegativeRewardType)
+                            path = handleRountingPath(0, data);
+
+                        /*
+                            Ha ainda a possibilidade de balancear o consumo de bateria utilizando sempre o caminho
+                            com melhor nivel energetico. Respeitando ainda o limite minimo BATTERY_MINIMUM_THRESHOLD.
+                        */
+                        if(NegativeRewardType)
+                            path = checkPathBattery(data);
+                        
                         if(path != null){
+                            System.out.println("PATH TO SEND" + path.toString());
+
                             System.out.println("*******************SENDING PATH******************");
                             pathChecker();
 
@@ -485,5 +509,51 @@ public class ControllerTCC extends Controller {
         }    
     }
 
+    private LinkedList<NodeAddress> checkPathBattery(NetworkPacket data){
+            int i=0;
+            boolean pathSuitable = false;
+            LinkedList path = new LinkedList<>();
 
+            for (Iterator it = this.pathVector.iterator(); it.hasNext(); i++) {
+                LinkedList<NodeAddress> p = (LinkedList<NodeAddress> )it.next();
+                System.out.println("CAMINHO: " + p.toString());
+                for (NodeAddress na : p) {
+                        System.out.println(" node - "+ na.toString() + " com bateria: " +nodesBattery.get(na));
+                    
+                    if(nodesBattery.get(na) < BATTERY_MINIMUM_THRESHOLD) {
+                        pathSuitable=false;
+                        break;
+                    } else {
+                        pathSuitable=true;
+                    }
+                }
+                if(pathSuitable) {
+                    path=p;
+                    break;
+                }
+            }
+            pathVector.clear();
+            
+            if(pathSuitable){
+                if(active_paths.containsKey(data.getDst())){
+                    if(path.equals(active_paths.get(data.getDst()))){
+                        System.out.println("Manteve o caminho " + path.toString());
+                        return null;
+                    } else {
+                        clearFlowtable((byte)data.getNetId(), data.getDst());
+                        active_paths.remove(data.getDst()); 
+                    }
+                }
+                active_paths.put(data.getDst(), path);
+                return path;
+            } else {
+                if(active_paths.containsKey(data.getDst())){
+                    clearFlowtable((byte)data.getNetId(), data.getDst());
+                    active_paths.remove(data.getDst()); 
+                }
+                timer.cancel();
+                System.out.println("NAO HA MAIS CAMINHOS DISPONIVEIS" );
+                return null;
+            }
+    }
 }

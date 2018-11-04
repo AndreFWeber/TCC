@@ -241,6 +241,8 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
                         TCC_manageRoutingRequest_disjoint(data, cluster1_networkGraph);
                     }*/
                     // manageRoutingRequest(data);
+                    if(!data.getSrc().toString().equals("0.1"))
+                        break;
                     System.out.println("\n\nINICIO____________________________________ FROM:" +  data.getSrc() + " To: " +  data.getDst() + " ");
                     if(CONTROLLER_TYPE.equals("TCC_Disjoint_Path"))
                         TCC_manageRoutingRequest_disjoint(data, networkGraph, true);
@@ -334,7 +336,7 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
             byte pl[] = {(byte)(18 | (1<<7)), 0, d, (byte) (dataSize >> 8), (byte) dataSize};
             cp.setPayload(pl)
               .setNxhop(sinkAddress);
-            System.out.println("-----sendSourceConfig--------"+ cp.toString());            
+            //System.out.println("-----sendSourceConfig--------"+ cp.toString());            
             sendNetworkPacket(cp);
             
     }
