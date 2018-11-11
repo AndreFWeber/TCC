@@ -24,6 +24,7 @@ import com.github.sdnwiselab.sdnwise.util.NodeAddress;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.logging.Level;
@@ -65,7 +66,7 @@ public class SdnWise {
      * configuration file.
      * @return the Controller layer of the current SDN-WISE network.
      */
-    public Controller startController(String configFilePath) {
+    public Controller startController(String configFilePath) throws FileNotFoundException, UnsupportedEncodingException {
         InputStream configFileURI = null;
         if (configFilePath == null || configFilePath.isEmpty()) {
             configFileURI = this.getClass().getResourceAsStream("/config.ini");
@@ -78,14 +79,15 @@ public class SdnWise {
         }
         Configurator conf = Configurator.load(configFileURI);
         controller = new ControllerFactory().getController(conf.getController());
+        
         new Thread(controller).start();
         return controller;
     }
 
-    public void startController_main() {
+    public void startController_main() throws FileNotFoundException, UnsupportedEncodingException {
         controller = SdnWise.this.startController("");
          
-        System.out.println("SDN-WISE Controller running...." );
+        System.out.println("TCC && SDN-WISE Controller running...." );
                
         // We wait for the network to start 
         try {
@@ -98,8 +100,8 @@ public class SdnWise {
                 //for (int i = 1; i <= 4; i++){
                     int netId = 1;
                     
-                    //NodeAddress dst = new NodeAddress((source?9:18));
-                    NodeAddress dst = new NodeAddress(4);
+                    NodeAddress dst = new NodeAddress((source?17:18));
+                    //NodeAddress dst = new NodeAddress(4);
 
                     source=!source;
                     NodeAddress src = new NodeAddress(1);
@@ -108,8 +110,8 @@ public class SdnWise {
                     p.setNxhop(src);
                     //System.out.println("_______________________________quering node " + source);
 
-                    p.setPayload("Hello World!".getBytes(Charset.forName("UTF-8")));
-                    controller.sendNetworkPacket(p);
+                    p.setPayload("MSG from Controller!".getBytes(Charset.forName("UTF-8")));
+                   // controller.sendNetworkPacket(p);
                     Thread.sleep(2000);
                 //}
             }

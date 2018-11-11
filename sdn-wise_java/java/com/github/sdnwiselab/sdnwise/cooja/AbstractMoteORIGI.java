@@ -344,11 +344,11 @@ public abstract class AbstractMote extends AbstractApplicationMote {
                     break;
                 case SDN_WISE_CNF_ID_CNT_BEACON_MAX:
                     cnt_beacon_max = value;
-					SDN_WISE_NEW_CNT_BEACON_MAX = value;
+					//SDN_WISE_NEW_CNT_BEACON_MAX = value;
                     break;
                 case SDN_WISE_CNF_ID_CNT_REPORT_MAX:
                     cnt_report_max = value;
-					SDN_WISE_NEW_CNT_REPORT_MAX = value;
+					//SDN_WISE_NEW_CNT_REPORT_MAX = value;
                     break;
                 case SDN_WISE_CNF_ID_CNT_UPDTABLE_MAX:
                     cnt_updtable_max = value;
@@ -523,7 +523,7 @@ public abstract class AbstractMote extends AbstractApplicationMote {
             if ((cntReport) >= cnt_report_max) {
                 cntReport = 0;
 				if( ++cntReportSent == 4 && !pathActive ) {
-
+/*
 					if(SDN_WISE_NEW_CNT_REPORT_MAX != 0)
 						cnt_report_max = SDN_WISE_NEW_CNT_REPORT_MAX*2;
 					else
@@ -533,7 +533,7 @@ public abstract class AbstractMote extends AbstractApplicationMote {
                     if(SDN_WISE_NEW_CNT_BEACON_MAX != 0)
                         cnt_beacon_max = SDN_WISE_NEW_CNT_BEACON_MAX*2;
                     else
-                        cnt_beacon_max = SDN_WISE_DFLT_CNT_BEACON_MAX*2;
+                        cnt_beacon_max = SDN_WISE_DFLT_CNT_BEACON_MAX*2;*/
 
 				}
 				log(" @@@@ENVIA REPORT " + pathActive + " " + cntReportSent + " " + cnt_report_max);
@@ -615,7 +615,7 @@ public abstract class AbstractMote extends AbstractApplicationMote {
             List<NodeAddress> path = opp.getPath();
             for (int i = 0; i < path.size(); i++) {
                 NodeAddress actual = path.get(i);
-                if (isAcceptedIdAddress(actual)) {
+                if (isAcceptedIdAddress(actual)) {/*
                     if(SDN_WISE_NEW_CNT_REPORT_MAX != 0)
                         cnt_report_max = SDN_WISE_NEW_CNT_REPORT_MAX;
                     else
@@ -623,7 +623,7 @@ public abstract class AbstractMote extends AbstractApplicationMote {
 					if(SDN_WISE_NEW_CNT_BEACON_MAX != 0)
                         cnt_beacon_max = SDN_WISE_NEW_CNT_BEACON_MAX;
                     else
-                        cnt_beacon_max = SDN_WISE_DFLT_CNT_BEACON_MAX;
+                        cnt_beacon_max = SDN_WISE_DFLT_CNT_BEACON_MAX;*/
 					pathActive=true;
 
 					log(" @@@@UPDATE REPORT INTERVAL TIME ON OPENPATH" + cnt_report_max );
@@ -707,7 +707,7 @@ public abstract class AbstractMote extends AbstractApplicationMote {
 	            log("***********************clearTable 2 for" + i);
 
                 NodeAddress actual = path.get(i);
-                if (isAcceptedIdAddress(actual)) {
+                if (isAcceptedIdAddress(actual)) {/*
                     if(SDN_WISE_NEW_CNT_REPORT_MAX != 0)
                         cnt_report_max = SDN_WISE_NEW_CNT_REPORT_MAX*2;
                     else
@@ -715,7 +715,7 @@ public abstract class AbstractMote extends AbstractApplicationMote {
                     if(SDN_WISE_NEW_CNT_BEACON_MAX != 0)
                         cnt_beacon_max = SDN_WISE_NEW_CNT_BEACON_MAX*2;
                     else
-                        cnt_beacon_max = SDN_WISE_DFLT_CNT_BEACON_MAX*2;
+                        cnt_beacon_max = SDN_WISE_DFLT_CNT_BEACON_MAX*2;*/
 					pathActive=false;
 
                     log(" @@@@UPDATE REPORT INTERVAL TIME ON OPENPATH" + cnt_report_max );

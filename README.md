@@ -32,3 +32,8 @@ Site oficial: http://sdn-wise.dieei.unict.it/
 
 
 Repositórios no GitHub: https://github.com/sdnwiselab
+
+
+user@instant-contiki:~/netbeans-8.2/bin$ ./netbeans -- --jdkhome /usr/lib/jvm/java-8-openjdk-i386/
+user@instant-contiki:~/contiki/tools/cooja$ sudo ant run
+root@instant-contiki:/home/user/contiki/tools/cooja/examples/sdn-wise_java#

@@ -37,7 +37,10 @@ import com.github.sdnwiselab.sdnwise.topology.NetworkGraph;
 import com.github.sdnwiselab.sdnwise.topology.VisualNetworkGraph;
 import com.github.sdnwiselab.sdnwise.util.NodeAddress;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.util.*;
@@ -70,7 +73,7 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
     final static int SDN_WISE_RLS_MAX = 16;
     final static int RESPONSE_TIMEOUT = 250;
     
-    protected String CONTROLLER_TYPE; 
+    protected String CONTROLLER_TYPE=""; 
 
 
 
@@ -86,6 +89,9 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
     
     protected Map<String, Integer> WEIGHT_ATTRIBUTE = new HashMap<String, Integer>();
 
+    protected Map<NodeAddress, Vector<LinkedList<NodeAddress>> > paths = new HashMap<NodeAddress, Vector<LinkedList<NodeAddress>> >();
+    protected Map<NodeAddress, LinkedList<NodeAddress> > active_paths = new HashMap<NodeAddress, LinkedList<NodeAddress> >();
+    
     private boolean isStopped;
     private final ArrayBlockingQueue<NetworkPacket> bQ;
 
@@ -100,7 +106,11 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
     protected String distribution_source;
     protected int data_bytes;
     
-    private int sendSourceData=0;
+    int sendSourceData=0;
+    
+    private long NOW=0;
+    private boolean counter_initialized =false;
+    private final PrintWriter out_writer;
     
     public NodeAddress getSinkAddress() {
         return sinkAddress;
@@ -113,7 +123,7 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
      * @param lower Lower Adpater object.
      * @param networkGraph NetworkGraph object.
      */
-    Controller(Adapter lower, NetworkGraph networkGraph, String type) {
+    Controller(Adapter lower, NetworkGraph networkGraph, String type) throws FileNotFoundException, UnsupportedEncodingException {
         this.lower = lower;
         bQ = new ArrayBlockingQueue<>(1000);
         this.networkGraph = networkGraph;
@@ -125,6 +135,18 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
         isStopped = false;
         sinkAddress = new NodeAddress("0.1");
         CONTROLLER_TYPE = type;
+        
+        this.out_writer =  new PrintWriter("battery.txt", "UTF-8");
+
+
+        /*try (this.out_writer = new PrintWriter("battery_motes.txt")) {/*
+            out.println("21:34:56"+"	"+2+"	"+9+"	"+"	"+7+"\n"+
+                      "21:44:56"+"	"+"	"+"	"+"	"+3+"\n"+
+                      "21:54:56"+"	"+"	"+"	"+"	"+3+"\n"+
+                      "22:04:56"+"	"+"	"+"	"+"	"+"\n"+
+                      "22:14:56"+"	"+"	"+"	"+"	"+5+"	"+"	"+8+"	"+"\n"
+                    );
+        }     */   
     }
     
     //    @Override
@@ -135,21 +157,43 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
         data_bytes = Integer.parseInt(dataSizeBytes);
     }
     
+    private void writeBattery2File(){
+        if(!counter_initialized)
+            NOW = System.currentTimeMillis();
+        counter_initialized=true;
+        int tab_given=1;        
+        
+        String toOutput= ""+(System.currentTimeMillis()-NOW)/1000;  
+        for(NodeAddress na : this.nodesBattery.keySet()){
+            int id = na.intValue();
+            for (int i = tab_given-1; i < id; i++,tab_given++) {
+                toOutput+="	";
+            }
+            toOutput+=this.nodesBattery.get(na);
+        }
+        for(NodeAddress na : active_paths.keySet()){
+            toOutput+="	";
+            toOutput+=this.active_paths.get(na).toString();
+        }        
+                        
+        out_writer.println(toOutput);
+        out_writer.flush();
+    }
+    
     public void managePacket(NetworkPacket data) {
         switch (data.getType()) {
             case SDN_WISE_REPORT:
-                //System.out.println("IN <<<<<<<<<<<< SDN_WISE_REPORT");
                  ReportPacket pkt = new ReportPacket(data);
 
                 this.nodesBattery.put(pkt.getSrc(), pkt.getBatt());
-                
+                //System.out.println("BATERIA:::: " + pkt.getSrc() + " " + pkt.getBatt());
+                writeBattery2File();
+                        
                 this.WEIGHT_ATTRIBUTE.put(pkt.getNetId()+"."+pkt.getSrc().toString(), 255-pkt.getBatt());
                 networkGraph.extraAttributesHandler("Battery", this.WEIGHT_ATTRIBUTE);
 
                 networkGraph.updateMap(pkt, -1);
                 
-                //System.out.println(pkt.getSrc().toString() + " <<<<<<<<<<<< SDN_WISE_REPORT" + pkt.getBatt());
-
                 int src_addr = Math.round(Float.parseFloat(pkt.getSrc().toString()) * 100);
 /*
                 if (pkt.getSrc().toString().equals("0.1")) 
@@ -164,9 +208,10 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
                     }
                 }
 */
-                if(sendSourceData<4)
+                if(sendSourceData<(4*network_source_ids.length))
                     for(int sindex=0; sindex<network_source_ids.length;sindex++){
                         if(network_source_ids[sindex].equals(pkt.getSrc().toString())){
+                            System.out.println("SEND A PORRA DO CARALHO DA CONFIG PARA O FDP DE ID: " + pkt.getSrc());
                             sendSourceConfig(data.getNetId(), pkt.getSrc(), distribution_source, data_bytes);
                             sendSourceData++;
                         }
@@ -248,6 +293,8 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
                         TCC_manageRoutingRequest_disjoint(data, networkGraph, true);
                     else if(CONTROLLER_TYPE.equals("TCC_Negative_Reward"))
                         TCC_manageRoutingRequest_Negative_Reward(data, networkGraph, true);
+                    else 
+                        manageRoutingRequest(data);
                 }
                 break;
         }

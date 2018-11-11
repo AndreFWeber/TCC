@@ -17,10 +17,19 @@
 package com.github.sdnwiselab.sdnwise.controller;
 
 import com.github.sdnwiselab.sdnwise.adapter.Adapter;
+import com.github.sdnwiselab.sdnwise.packet.DataPacket;
 import com.github.sdnwiselab.sdnwise.packet.NetworkPacket;
 import com.github.sdnwiselab.sdnwise.topology.NetworkGraph;
 import com.github.sdnwiselab.sdnwise.util.NodeAddress;
+import java.io.FileNotFoundException;
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 import org.graphstream.algorithm.Dijkstra;
 import org.graphstream.graph.Node;
 
@@ -46,7 +55,7 @@ public class ControllerDijkstra extends Controller {
      * @param lower Lower Adpater object.
      * @param networkGraph NetworkGraph object.
      */
-    public ControllerDijkstra(Adapter lower, NetworkGraph networkGraph) {
+    public ControllerDijkstra(Adapter lower, NetworkGraph networkGraph) throws FileNotFoundException, UnsupportedEncodingException {
         super(lower, networkGraph, "ControllerDijkstra");
         this.dijkstra = new Dijkstra(Dijkstra.Element.EDGE, null, "length");
     }
@@ -58,7 +67,6 @@ public class ControllerDijkstra extends Controller {
 
     @Override
     public final void manageRoutingRequest(NetworkPacket data) {
-
         String destination = data.getNetId() + "." + data.getDst();
         String source = data.getNetId() + "." + data.getSrc();
 
@@ -89,8 +97,18 @@ public class ControllerDijkstra extends Controller {
                     results.put(data.getDst(), path);
                 }
                 if (path.size() > 1) {
+                    if(active_paths.get(data.getDst()) != null){
+                        if(active_paths.get(data.getDst()).toString().equals(path.toString())){
+                            System.out.println("Mantem o caminho em uso...");
+                            return;
+                        }
+                        clearFlowtable((byte)data.getNetId(), data.getDst());
+                        active_paths.remove(data.getDst());
+                    }
+                    System.out.println("******************SENDING PATH***********" + path.toString());
+                    pathChecker();
+                    active_paths.put(data.getDst(), path);
                     sendPath((byte) data.getNetId(), path.getFirst(), path);
-
                     data.unsetRequestFlag();
                     data.setSrc(getSinkAddress());
                     sendNetworkPacket(data);
@@ -103,6 +121,43 @@ public class ControllerDijkstra extends Controller {
         }
     }
 
+        boolean pathCheckerOn = false;
+        private Timer timer;
+
+    private void pathChecker() {
+        if(pathCheckerOn)
+           return;
+        pathCheckerOn=true;
+
+        System.out.println("\n\nINIT TIMER\n\n");
+        
+        timer = new Timer("MyTimer");//create a new Timer
+        TimerTask timerTask = new TimerTask() {
+            @Override
+            public void run() {
+                System.out.println("\n\n\nCHECK PATH " + active_paths.toString());
+                Map<NodeAddress, LinkedList<NodeAddress> > paths = new HashMap<NodeAddress, LinkedList<NodeAddress> >();
+                for (Iterator it = active_paths.keySet().iterator(); it.hasNext();) {
+                    NodeAddress index = (NodeAddress)it.next();
+                    paths.put(index, active_paths.get(index));
+                }
+                //Necessario, pois o metodo *manageRouting* modifica a lista active_paths
+                System.out.println("path size checker " + paths.size());
+                for (Iterator it = paths.keySet().iterator(); it.hasNext();) {
+                    NodeAddress index = (NodeAddress)it.next();
+                    
+                    DataPacket p = new DataPacket(1,getSinkAddress(), index);
+                    p.setNxhop(getSinkAddress());
+                    
+                    p.setPayload("Veryfing if path is OK :D".getBytes(Charset.forName("UTF-8")));
+                    manageRoutingRequest(p);
+                }
+            }
+        };
+        timer.scheduleAtFixedRate(timerTask, 20000, 20000);//this line starts the timer at the same time its executed
+    }
+    
+    
     @Override
     public void setupNetwork() {
 
@@ -114,8 +169,21 @@ public class ControllerDijkstra extends Controller {
     }
 
     @Override
-    public void clearFlowtable(byte netId, NodeAddress addr) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void clearFlowtable(byte netId, NodeAddress addr/*,  NetworkPacket data*/){
+        if(active_paths.isEmpty())
+            System.out.println("Active Path is empty");
+        else {
+            System.out.println("sendClearFlowtable - " + addr.toString() + " clear " + active_paths.get(addr).toString());
+  //          timer.cancel();
+//            pathCheckerOn=false;
+            //sendClearFlowtable((byte) data.getNetId(), data.getSrc(), active_paths.get(data.getSrc()));
+            sendClearFlowtable(netId, addr, active_paths.get(addr));
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException ex) {
+                System.out.println("\nThread.sleep\n");
+            }
+        }
     }
 
     @Override

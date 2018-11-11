@@ -113,9 +113,13 @@ public class Mote extends AbstractMote {
 
     @Override
     public final void controllerTX(NetworkPacket pck) {
-        pck.setNxhop(getNextHopVsSink());
+		NodeAddress addr = getNextHopVsSink();
+		
+		if(addr!=null){
+	        pck.setNxhop(getNextHopVsSink());
 
-        radioTX(pck);
+    	    radioTX(pck);
+		}
     }
 
     @Override

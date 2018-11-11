@@ -21,6 +21,8 @@ import com.github.sdnwiselab.sdnwise.adapter.AdapterTcp;
 import com.github.sdnwiselab.sdnwise.adapter.AdapterUdp;
 import com.github.sdnwiselab.sdnwise.configuration.ConfigController;
 import com.github.sdnwiselab.sdnwise.topology.*;
+import java.io.FileNotFoundException;
+import java.io.UnsupportedEncodingException;
 
 /**
  * This class creates a Controller object given the specifications contained in
@@ -65,12 +67,14 @@ public class ControllerFactory {
     }
 
     
-    public Controller getControllerType(ConfigController conf, Adapter adapt, NetworkGraph ng) {
+    public Controller getControllerType(ConfigController conf, Adapter adapt, NetworkGraph ng) throws FileNotFoundException, UnsupportedEncodingException {
         String type = conf.getAlgorithm().get("TYPE");
         
         switch (type) {
             case "DIJKSTRA":
-                return new ControllerDijkstra(adapt, ng);
+                ControllerDijkstra c_d = new ControllerDijkstra(adapt, ng);
+                c_d.config_source(conf.getAlgorithm().get("CHECK_INTERVAL"), conf.getAlgorithm().get("SOURCE_NODE_ID"), conf.getAlgorithm().get("DISTRIBUTION"), conf.getAlgorithm().get("DATA_SIZE_BYTES"));
+                return c_d;
             case "TCC_Negative_Reward":
             case "TCC_Disjoint_Path":
                 ControllerTCC c = new ControllerTCC(adapt, ng, type);
@@ -89,7 +93,7 @@ public class ControllerFactory {
      * @param config a ConfigController object.
      * @return a Controller object.
      */
-    public final Controller getController(ConfigController config) {
+    public final Controller getController(ConfigController config) throws FileNotFoundException, UnsupportedEncodingException {
         Adapter adapt = getLower(config);
         NetworkGraph ng = getNetworkGraph(config);
         return getControllerType(config, adapt, ng);

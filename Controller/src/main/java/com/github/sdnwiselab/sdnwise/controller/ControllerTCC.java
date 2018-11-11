@@ -21,6 +21,8 @@ import com.github.sdnwiselab.sdnwise.packet.DataPacket;
 import com.github.sdnwiselab.sdnwise.packet.NetworkPacket;
 import com.github.sdnwiselab.sdnwise.topology.NetworkGraph;
 import com.github.sdnwiselab.sdnwise.util.NodeAddress;
+import java.io.FileNotFoundException;
+import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -29,6 +31,8 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.graphstream.algorithm.Dijkstra;
 import org.graphstream.graph.Edge;
 import org.graphstream.graph.Node;
@@ -49,11 +53,12 @@ public class ControllerTCC extends Controller {
     private final Dijkstra dijkstra;
     private String lastSource = "";
     private long lastModification = -1;
-    protected Map<NodeAddress, Vector<LinkedList<NodeAddress>> > paths = new HashMap<NodeAddress, Vector<LinkedList<NodeAddress>> >();
-    protected Map<NodeAddress, LinkedList<NodeAddress> > active_paths = new HashMap<NodeAddress, LinkedList<NodeAddress> >();
+
 
     private final Vector<LinkedList<NodeAddress>> pathVector = new Vector<>(2); // N here isn't really needed, but it sets the initial capacity of the vector
-    private int BATTERY_MINIMUM_THRESHOLD = 250;
+    private final LinkedList<NodeAddress> motesInUse = new LinkedList<NodeAddress>();
+
+    private int BATTERY_MINIMUM_THRESHOLD = 5;
 
     private Timer timer;
     /*
@@ -61,7 +66,7 @@ public class ControllerTCC extends Controller {
     um dos modulo. 
         NegativeRewardType = true -> balanceia os caminhos. i.e: Utiliza sempre o caminho com menor custo (Melhor nivel energetico)
     */
-    private boolean NegativeRewardType = true; 
+    private boolean NegativeRewardType = false; 
             
     /*
      * Constructor method fo ControllerDijkstra.
@@ -70,7 +75,7 @@ public class ControllerTCC extends Controller {
      * @param lower Lower Adpater object.
      * @param networkGraph NetworkGraph object.
      */
-    public ControllerTCC(Adapter lower, NetworkGraph networkGraph, String type) {
+    public ControllerTCC(Adapter lower, NetworkGraph networkGraph, String type) throws FileNotFoundException, UnsupportedEncodingException {
         super(lower, networkGraph, type);
         switch (type) {
             case "TCC_Negative_Reward":
@@ -143,6 +148,7 @@ public class ControllerTCC extends Controller {
     private LinkedList<NodeAddress> handleRountingPath(int initialSize, NetworkPacket data){
         if(!this.pathVector.isEmpty()){
             LinkedList<NodeAddress> pathToSend = null;
+                            System.out.println("\n handleRountingPath \n");
 
             //int shorterPathIndex = 0;
             Vector shorterPathIndex = new Vector();
@@ -156,16 +162,46 @@ public class ControllerTCC extends Controller {
             int i = 0;
             for (Iterator it = this.pathVector.iterator(); it.hasNext(); i++) {
                 LinkedList<NodeAddress> p = (LinkedList<NodeAddress> )it.next();
+                
                 if(DEBUG_PRINT){
                     System.out.println("path "+p.toString());
                     System.out.println("p.size() "+ p.size() + " shorterPathHops " + shorterPathHops);
                 }
                 if(p.size()<initialSize)
                     continue;
+                
                 for (NodeAddress na : p){
-                    if(DEBUG_PRINT)
-                        System.out.println(" node - "+ na.toString() + " com bateria: " +nodesBattery.get(na));
+
+                    //Necessario, pois o metodo *manageRouting* modifica a lista active_paths
+                    Map<NodeAddress, LinkedList<NodeAddress>> paths = new HashMap<NodeAddress, LinkedList<NodeAddress>>();
+                    for (Iterator it_ap = active_paths.keySet().iterator(); it_ap.hasNext();) {
+                        NodeAddress index = (NodeAddress) it_ap.next();
+                        paths.put(index, active_paths.get(index));
+                    }
+                    if (CONTROLLER_TYPE.equals("TCC_Disjoint_Path"))
+                        //Verifica se o modulo na ja nao pertence a outro caminho ativo...
+                        for (Iterator it_ap = paths.keySet().iterator(); it_ap.hasNext();) {
+                            NodeAddress index = (NodeAddress) it_ap.next();
+
+                            System.out.println("fdsfsdGET SRC " + data.getDst().toString() + " EEEEE" + index.toString()+"\n\n\n");
+                            if(data.getSrc() == index)
+                                continue;
+                            LinkedList<NodeAddress> pathInUse = paths.get(index);
+                            System.out.println("PATH IN USE: " + pathInUse.toString() + " " + pathInUse.contains(na));
+                            if(pathInUse.contains(na)){
+                                pathSuitable=false;
+                                break;
+                            } else {
+                                pathSuitable=true;
+                            }                                                           
+                        }
                     
+                        if(!pathSuitable)
+                            break;
+                    }
+                    //Checa a bateria de cada modulo...
+                    if(DEBUG_PRINT)
+                        System.out.println(" node - "+ na.toString() + " com bateria: " +nodesBattery.get(na));                                      
                     if(nodesBattery.get(na) < BATTERY_MINIMUM_THRESHOLD){
                         pathSuitable=false;
                         break;
@@ -269,9 +305,7 @@ public class ControllerTCC extends Controller {
                         if(!numberOfHopsAvailable.isEmpty())
                             numberOfHopsAvailable.remove(0);
                         if(numberOfHopsAvailable.isEmpty()){
-                                
                             System.out.println(" NO MORE PATHS AVAILABLE" );
-                            timer.cancel();
                         } else {
                             handleRountingPath((Integer)numberOfHopsAvailable.get(0),  data);
                         }
@@ -305,8 +339,24 @@ public class ControllerTCC extends Controller {
             System.out.println("Active Path is empty");
         else {
             System.out.println("sendClearFlowtable - " + addr.toString() + " clear " + active_paths.get(addr).toString());
+  //          timer.cancel();
+//            pathCheckerOn=false;
             //sendClearFlowtable((byte) data.getNetId(), data.getSrc(), active_paths.get(data.getSrc()));
             sendClearFlowtable(netId, addr, active_paths.get(addr));
+            /*
+            for (Iterator it = motesInUse.iterator(); it.hasNext();) {
+                NodeAddress na = (NodeAddress)it.next();
+                if(!active_paths.containsKey(na)){
+                    System.out.println("REMOVE " + na.toString());
+                    motesInUse.remove(na);
+                }
+            }*/
+            
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException ex) {
+                System.out.println("\nThread.sleep\n");
+            }
         }
     }
     
@@ -334,6 +384,8 @@ public class ControllerTCC extends Controller {
                     path = new LinkedList<>();
                     for (Node node : dijkstra.getPathNodes(tmp_networkGraph.getNode(destination))) {
                         path.push((NodeAddress) node.getAttribute("nodeAddress"));
+                        
+                        
                         if(!node.getAttribute("nodeAddress").equals(data.getDst()) && !node.getAttribute("nodeAddress").equals(data.getSrc())){
                            tmp_networkGraph.removeNode(node);
                         }
@@ -350,8 +402,14 @@ public class ControllerTCC extends Controller {
                     this.paths.put(data.getDst(), pathVector);
                     //pathVector.clear();
                     path = handleRountingPath(0, data);
-                    if(path != null){
-                        System.out.println("*******************SENDING PATH******************");
+                    if(path != null){/*
+                        for (Iterator it = path.iterator(); it.hasNext();) {
+                            NodeAddress na = (NodeAddress)it.next();
+                            if(!na.toString().equals("0.1"))
+                                motesInUse.push(na);
+                        }*/
+                        //System.out.println("MOTES IN USE " + motesInUse.toString());
+                        System.out.println("11*******************SENDING PATH******************");
                         pathChecker();
                         
                         sendPath((byte) data.getNetId(), path.getFirst(), path);
@@ -376,12 +434,22 @@ public class ControllerTCC extends Controller {
         if(pathCheckerOn)
            return;
         pathCheckerOn=true;
+
+        System.out.println("\n\nINIT TIMER\n\n");
+        
         timer = new Timer("MyTimer");//create a new Timer
         TimerTask timerTask = new TimerTask() {
             @Override
             public void run() {
                 System.out.println("\n\n\nCHECK PATH " + active_paths.toString());
+                Map<NodeAddress, LinkedList<NodeAddress> > paths = new HashMap<NodeAddress, LinkedList<NodeAddress> >();
                 for (Iterator it = active_paths.keySet().iterator(); it.hasNext();) {
+                    NodeAddress index = (NodeAddress)it.next();
+                    paths.put(index, active_paths.get(index));
+                }
+                //Necessario, pois o metodo *manageRouting* modifica a lista active_paths
+                System.out.println("path size checker " + paths.size());
+                for (Iterator it = paths.keySet().iterator(); it.hasNext();) {
                     NodeAddress index = (NodeAddress)it.next();
                     
                     DataPacket p = new DataPacket(1,getSinkAddress(), index);
@@ -406,14 +474,14 @@ public class ControllerTCC extends Controller {
     public void TCC_manageRoutingRequest_Negative_Reward(NetworkPacket data, NetworkGraph _networkGraph, boolean SendDataBack) {
         NetworkGraph tmp_networkGraph = new NetworkGraph(_networkGraph.getTimeout(), _networkGraph.getRssiResolution());
         tmp_networkGraph.copy(_networkGraph);
-                
+
         String destination = data.getNetId() + "." + data.getDst();
         String source = data.getNetId() + "." + data.getSrc();
 
-        if(active_paths.containsKey(data.getSrc())){
+        if(active_paths.containsKey(data.getSrc())) {
             System.out.println("Caminho atual: "+active_paths.get(data.getSrc()).toString());
         }
-        
+
         if (!source.equals(destination)) {
             Node sourceNode =  tmp_networkGraph.getNode(source);
             Node destinationNode = tmp_networkGraph.getNode(destination);
@@ -426,14 +494,13 @@ public class ControllerTCC extends Controller {
                 dijkstra.compute();
                 lastSource = source;
                 lastModification = tmp_networkGraph.getLastModification();
-                    
                 path = new LinkedList<>();
+              
                 for (Node node : dijkstra.getPathNodes(tmp_networkGraph.getNode(destination))) {
                     path.push((NodeAddress) node.getAttribute("nodeAddress"));
                     //Map<String, Integer> nBatteryWeight = new HashMap<String, Integer>();
                 }
                 if(path.size()>0){                    
-
                     if (!pathVector.contains(path)) {
                         System.out.println("[CTRL]: " + path + " WEIGHT: "+ dijkstra.getPathLength(tmp_networkGraph.getNode(destination)) );
                         int index = -1;
@@ -453,7 +520,7 @@ public class ControllerTCC extends Controller {
                                             || e.getNode0().getId().equals("1." + (next != null ? next.toString() : "n null"))) {
                                         // System.out.println("BINGO "  + e.getNode0().getId() + " e "+  e.getNode1().getId());
                                         if (e.getAttribute("Battery") != null) {
-                                            e.setAttribute("Battery", (Integer) e.getAttribute("Battery") * 100);
+                                            e.setAttribute("Battery", (Integer) e.getAttribute("Battery") * 2);
                                             //System.out.println("SET BATTERY " + e.getAttribute("Battery"));
                                         }
                                     }
@@ -474,15 +541,17 @@ public class ControllerTCC extends Controller {
                             handleRountingPath vai utilizar um caminho ate que a bateria de um dos modulos
                             possua um nivel de bateria abaixo do minimo limiar definido por BATTERY_MINIMUM_THRESHOLD
                         */
-                        if(!NegativeRewardType)
+                        if(!NegativeRewardType){
                             path = handleRountingPath(0, data);
+                        }
 
                         /*
                             Ha ainda a possibilidade de balancear o consumo de bateria utilizando sempre o caminho
                             com melhor nivel energetico. Respeitando ainda o limite minimo BATTERY_MINIMUM_THRESHOLD.
                         */
-                        if(NegativeRewardType)
+                        if(NegativeRewardType) {
                             path = checkPathBattery(data);
+                        }
                         
                         if(path != null){
                             System.out.println("PATH TO SEND" + path.toString());
@@ -551,7 +620,6 @@ public class ControllerTCC extends Controller {
                     clearFlowtable((byte)data.getNetId(), data.getDst());
                     active_paths.remove(data.getDst()); 
                 }
-                timer.cancel();
                 System.out.println("NAO HA MAIS CAMINHOS DISPONIVEIS" );
                 return null;
             }

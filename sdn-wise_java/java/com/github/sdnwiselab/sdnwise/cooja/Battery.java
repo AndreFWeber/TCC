@@ -27,9 +27,10 @@ public class Battery {
 
     private final static double maxLevel = 5000;    // 9000000 mC = 2 AAA batteries = 15 Days  
     // 5000 mC = 12 min 
-    private final static double keepAlive = 0.01;        // mC spent every 1 s
-    private final static double transmitRadio = 0.03;//0.0027; // mC to send 1byte
-    private final static double receiveRadio = 0.05;//0.00094; // mC to receive 1byte
+	private final static double w = 10.0;
+    private final static double keepAlive = w*0.01;        // mC spent every 1 s
+    private final static double transmitRadio = w*0.03;//0.0027; // mC to send 1byte
+    private final static double receiveRadio = w*0.05;//0.00094; // mC to receive 1byte
     private double batteryLevel;
 
     /**
