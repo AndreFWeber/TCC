@@ -89,8 +89,9 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
     
     protected Map<String, Integer> WEIGHT_ATTRIBUTE = new HashMap<String, Integer>();
 
-    protected Map<NodeAddress, Vector<LinkedList<NodeAddress>> > paths = new HashMap<NodeAddress, Vector<LinkedList<NodeAddress>> >();
     protected Map<NodeAddress, LinkedList<NodeAddress> > active_paths = new HashMap<NodeAddress, LinkedList<NodeAddress> >();
+    
+    private LinkedList<NodeAddress> nodesOn =  new LinkedList<>();
     
     private boolean isStopped;
     private final ArrayBlockingQueue<NetworkPacket> bQ;
@@ -101,13 +102,11 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
 
     private final NodeAddress sinkAddress;
 
-    protected String[] network_source_ids;
+    protected List<String> network_source_ids;
     protected int CHECK_INTERVAL; 
     protected String distribution_source;
     protected int data_bytes;
-    
-    int sendSourceData=0;
-    
+        
     private long NOW=0;
     private boolean counter_initialized =false;
     private final PrintWriter out_writer;
@@ -151,7 +150,7 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
     
     //    @Override
     public void config_source(String interval, String source_node_IDs, String distribution, String dataSizeBytes) {
-        network_source_ids = source_node_IDs.split(" ");
+        network_source_ids = new LinkedList<>(Arrays.asList(source_node_IDs.split(" ")));
         CHECK_INTERVAL = Integer.parseInt(interval);
         distribution_source = distribution;
         data_bytes = Integer.parseInt(dataSizeBytes);
@@ -208,18 +207,32 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
                     }
                 }
 */
-                if(sendSourceData<(4*network_source_ids.length))
-                    for(int sindex=0; sindex<network_source_ids.length;sindex++){
-                        if(network_source_ids[sindex].equals(pkt.getSrc().toString())){
-                            System.out.println("SEND A PORRA DO CARALHO DA CONFIG PARA O FDP DE ID: " + pkt.getSrc());
-                            sendSourceConfig(data.getNetId(), pkt.getSrc(), distribution_source, data_bytes);
-                            sendSourceData++;
-                        }
+                if(!nodesOn.contains(pkt.getSrc())){
+                    nodesOn.push(pkt.getSrc());
+                    //System.out.println("RECEBI OI DO " + pkt.getSrc() + " " + nodesOn.size());              
+                }
+                    
+                if(nodesOn.size()>=18)
+                for (Iterator<String> iterator = network_source_ids.iterator(); iterator.hasNext();) {
+                    String next = iterator.next();
+                    
+                    if(next.equals(pkt.getSrc().toString())){
+                        sendSourceConfig(data.getNetId(), pkt.getSrc(), distribution_source, data_bytes);
+                        System.out.println("SEND TO "+ next);
                     }
-                   
+                }
+                /*
+                for(int sindex=0; sindex<network_source_ids.si;sindex++){
+                    if(network_source_ids[sindex].equals(pkt.getSrc().toString())){
+                        sendSourceConfig(data.getNetId(), pkt.getSrc(), distribution_source, data_bytes);
+                    }
+                }
+                   */
                 break;
             case SDN_WISE_DATA:
-            //System.out.println("IN <<<System<<<<<<<<< SDN_WISE_DATA");
+               // System.out.println("IN <<<System<<<<<<<<< SDN_WISE_DATA from" + data.getSrc());
+                network_source_ids.remove(data.getSrc().toString());
+               // System.out.println("AFTER REMOVAL ----- "+ data.getSrc().toString() + " " + network_source_ids.toString());
             case SDN_WISE_BEACON:
             //System.out.println("IN <<<System<<<<<<<<< SDN_WISE_BEACON");
             case SDN_WISE_RESPONSE:

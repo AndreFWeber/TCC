@@ -49,14 +49,14 @@ import org.graphstream.graph.Path;
  */
 public class ControllerTCC extends Controller {
 
-    private final boolean DEBUG_PRINT = false;
+    private final boolean DEBUG_PRINT = true;
     private final Dijkstra dijkstra;
     private String lastSource = "";
     private long lastModification = -1;
 
 
     private final Vector<LinkedList<NodeAddress>> pathVector = new Vector<>(2); // N here isn't really needed, but it sets the initial capacity of the vector
-    private final LinkedList<NodeAddress> motesInUse = new LinkedList<NodeAddress>();
+    private final Vector<LinkedList<NodeAddress>> disjointpathVector = new Vector<>(2); // N here isn't really needed, but it sets the initial capacity of the vector
 
     private int BATTERY_MINIMUM_THRESHOLD = 5;
 
@@ -148,7 +148,6 @@ public class ControllerTCC extends Controller {
     private LinkedList<NodeAddress> handleRountingPath(int initialSize, NetworkPacket data){
         if(!this.pathVector.isEmpty()){
             LinkedList<NodeAddress> pathToSend = null;
-                            System.out.println("\n handleRountingPath \n");
 
             //int shorterPathIndex = 0;
             Vector shorterPathIndex = new Vector();
@@ -178,17 +177,17 @@ public class ControllerTCC extends Controller {
                         NodeAddress index = (NodeAddress) it_ap.next();
                         paths.put(index, active_paths.get(index));
                     }
-                    if (CONTROLLER_TYPE.equals("TCC_Disjoint_Path"))
+                    if (CONTROLLER_TYPE.equals("TCC_Disjoint_Path")) {
                         //Verifica se o modulo na ja nao pertence a outro caminho ativo...
                         for (Iterator it_ap = paths.keySet().iterator(); it_ap.hasNext();) {
                             NodeAddress index = (NodeAddress) it_ap.next();
 
-                            System.out.println("fdsfsdGET SRC " + data.getDst().toString() + " EEEEE" + index.toString()+"\n\n\n");
-                            if(data.getSrc() == index)
-                                continue;
+                            if(data.getDst().toString().equals(index.toString())){
+                                pathSuitable=true;
+                                break;
+                            }
                             LinkedList<NodeAddress> pathInUse = paths.get(index);
-                            System.out.println("PATH IN USE: " + pathInUse.toString() + " " + pathInUse.contains(na));
-                            if(pathInUse.contains(na)){
+                            if(pathInUse.contains(na) && !na.toString().equals("0.1")){
                                 pathSuitable=false;
                                 break;
                             } else {
@@ -335,7 +334,7 @@ public class ControllerTCC extends Controller {
     
     @Override
     public void clearFlowtable(byte netId, NodeAddress addr/*,  NetworkPacket data*/){
-        if(active_paths.isEmpty())
+        if(active_paths.isEmpty() || !active_paths.containsKey(addr))
             System.out.println("Active Path is empty");
         else {
             System.out.println("sendClearFlowtable - " + addr.toString() + " clear " + active_paths.get(addr).toString());
@@ -368,6 +367,8 @@ public class ControllerTCC extends Controller {
         String destination = data.getNetId() + "." + data.getDst();
         String source = data.getNetId() + "." + data.getSrc();
 
+        disjoint_use_data = data;
+        
         if (!source.equals(destination)) {
             Node sourceNode =  tmp_networkGraph.getNode(source);
             Node destinationNode = tmp_networkGraph.getNode(destination);
@@ -384,8 +385,7 @@ public class ControllerTCC extends Controller {
                     path = new LinkedList<>();
                     for (Node node : dijkstra.getPathNodes(tmp_networkGraph.getNode(destination))) {
                         path.push((NodeAddress) node.getAttribute("nodeAddress"));
-                        
-                        
+
                         if(!node.getAttribute("nodeAddress").equals(data.getDst()) && !node.getAttribute("nodeAddress").equals(data.getSrc())){
                            tmp_networkGraph.removeNode(node);
                         }
@@ -394,13 +394,12 @@ public class ControllerTCC extends Controller {
                         System.out.println("[CTRL]: " + path);
                         results.put(data.getDst(), path);      
                         pathVector.add(path);
+                        disjointpathVector.add(path);
                     }
                 if (path.size() > 1 && path.size() > 2) {
                     TCC_manageRoutingRequest_disjoint(data, tmp_networkGraph, SendDataBack);
                 } else {
                     System.out.println("FIM____________________________________ FROM:" + source + " To: " + destination + " ");
-                    this.paths.put(data.getDst(), pathVector);
-                    //pathVector.clear();
                     path = handleRountingPath(0, data);
                     if(path != null){/*
                         for (Iterator it = path.iterator(); it.hasNext();) {
@@ -429,6 +428,7 @@ public class ControllerTCC extends Controller {
         }
     }
     boolean pathCheckerOn = false;
+    NetworkPacket disjoint_use_data;
     
     private void pathChecker() {
         if(pathCheckerOn)
@@ -456,8 +456,25 @@ public class ControllerTCC extends Controller {
                     p.setNxhop(getSinkAddress());
                     
                     p.setPayload("Veryfing if path is OK :D".getBytes(Charset.forName("UTF-8")));
-                    if(CONTROLLER_TYPE.equals("TCC_Disjoint_Path"))
-                        TCC_manageRoutingRequest_disjoint(p, networkGraph, false);
+                    if(CONTROLLER_TYPE.equals("TCC_Disjoint_Path")){
+                        for (Iterator it_d = disjointpathVector.iterator(); it_d.hasNext();) {
+                            LinkedList<NodeAddress> copy = (LinkedList<NodeAddress> )it_d.next();
+                            pathVector.add(copy);
+                        }
+                        
+                        for (Iterator<String> iterator = network_source_ids.iterator(); iterator.hasNext();) {
+                            String next = iterator.next();
+                            
+                        }
+                        
+                         LinkedList<NodeAddress> path = handleRountingPath(0, disjoint_use_data);
+                        if (path != null) {
+                            System.out.println("11*******************SENDING PATH******************");
+                            sendPath((byte) disjoint_use_data.getNetId(), path.getFirst(), path);
+                        } else {
+                            System.out.println("PATH NULL o.0 Ele manteve o caminho... :D ");
+                        }                
+                    }
                     else if(CONTROLLER_TYPE.equals("TCC_Negative_Reward"))
                         TCC_manageRoutingRequest_Negative_Reward(p, networkGraph, false);
                 }
@@ -534,7 +551,6 @@ public class ControllerTCC extends Controller {
                         TCC_manageRoutingRequest_Negative_Reward(data, tmp_networkGraph, SendDataBack);
                     } else {                        
                         System.out.println("FIM____________________________________ FROM:" + source + " To: " + destination + " ");
-                        this.paths.put(data.getDst(), pathVector);
                         //pathVector.clear();
 
                         /*

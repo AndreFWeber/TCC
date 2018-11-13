@@ -106,7 +106,7 @@ public class ControllerDijkstra extends Controller {
                         active_paths.remove(data.getDst());
                     }
                     System.out.println("******************SENDING PATH***********" + path.toString());
-                    pathChecker();
+                    //pathChecker();
                     active_paths.put(data.getDst(), path);
                     sendPath((byte) data.getNetId(), path.getFirst(), path);
                     data.unsetRequestFlag();
