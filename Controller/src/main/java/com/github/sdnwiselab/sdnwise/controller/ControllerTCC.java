@@ -66,7 +66,7 @@ public class ControllerTCC extends Controller {
     um dos modulo. 
         NegativeRewardType = true -> balanceia os caminhos. i.e: Utiliza sempre o caminho com menor custo (Melhor nivel energetico)
     */
-    private boolean NegativeRewardType = false; 
+    private boolean NegativeRewardType = true; 
             
     /*
      * Constructor method fo ControllerDijkstra.
@@ -480,13 +480,14 @@ public class ControllerTCC extends Controller {
                 }
             }
         };
-        timer.scheduleAtFixedRate(timerTask, 20000, 20000);//this line starts the timer at the same time its executed
+        timer.scheduleAtFixedRate(timerTask, CHECK_INTERVAL, CHECK_INTERVAL);//this line starts the timer at the same time its executed
     }
     
     @Override
     public void setupNetwork() {
     }
 
+    private int negative_path_found = 0;
     @Override
     public void TCC_manageRoutingRequest_Negative_Reward(NetworkPacket data, NetworkGraph _networkGraph, boolean SendDataBack) {
         NetworkGraph tmp_networkGraph = new NetworkGraph(_networkGraph.getTimeout(), _networkGraph.getRssiResolution());
@@ -518,7 +519,7 @@ public class ControllerTCC extends Controller {
                     //Map<String, Integer> nBatteryWeight = new HashMap<String, Integer>();
                 }
                 if(path.size()>0){                    
-                    if (!pathVector.contains(path)) {
+                    if (!pathVector.contains(path) && negative_path_found++<10) {
                         System.out.println("[CTRL]: " + path + " WEIGHT: "+ dijkstra.getPathLength(tmp_networkGraph.getNode(destination)) );
                         int index = -1;
                         for (NodeAddress naddress : path) {
@@ -551,6 +552,7 @@ public class ControllerTCC extends Controller {
                         TCC_manageRoutingRequest_Negative_Reward(data, tmp_networkGraph, SendDataBack);
                     } else {                        
                         System.out.println("FIM____________________________________ FROM:" + source + " To: " + destination + " ");
+                        negative_path_found=0;
                         //pathVector.clear();
 
                         /*
