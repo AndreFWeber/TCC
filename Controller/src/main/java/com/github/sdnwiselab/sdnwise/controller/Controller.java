@@ -187,8 +187,19 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
                 this.nodesBattery.put(pkt.getSrc(), pkt.getBatt());
                 //System.out.println("BATERIA:::: " + pkt.getSrc() + " " + pkt.getBatt());
                 writeBattery2File();
-                        
-                this.WEIGHT_ATTRIBUTE.put(pkt.getNetId()+"."+pkt.getSrc().toString(), 255-pkt.getBatt());
+                 
+                int used = 1;
+                for (Iterator it = this.active_paths.values().iterator(); it.hasNext();) {
+                    LinkedList<NodeAddress> path = (LinkedList<NodeAddress>) it.next();
+                    if(path.contains(pkt.getSrc()) && !pkt.getSrc().toString().equals("0.1")){
+                        used*=2;
+                        System.out.println("MERDAAAAAAAAAAAAAAAAA " + pkt.getSrc().toString()+ "se fudeu " + used );
+                    } else {  
+                        System.out.println("DEEEEEEEEEEEEEEEEEEBOS " + pkt.getSrc().toString()+ "n se fudeu " + used );
+                    }
+                }
+                this.WEIGHT_ATTRIBUTE.put(pkt.getNetId()+"."+pkt.getSrc().toString(), (255-pkt.getBatt())*used);
+
                 networkGraph.extraAttributesHandler("Battery", this.WEIGHT_ATTRIBUTE);
 
                 networkGraph.updateMap(pkt, -1);

@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Observable;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
@@ -94,6 +95,12 @@ public class ControllerTCC extends Controller {
 
     }
 
+        @Override
+    public void update(Observable o, Object arg) {
+        super.update(o, arg);
+
+    }
+    
     @Override
     public final void manageRoutingRequest(NetworkPacket data) {
 
