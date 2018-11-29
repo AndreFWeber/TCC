@@ -500,6 +500,37 @@ public class ControllerTCC extends Controller {
         NetworkGraph tmp_networkGraph = new NetworkGraph(_networkGraph.getTimeout(), _networkGraph.getRssiResolution());
         tmp_networkGraph.copy(_networkGraph);
 
+        for (Edge e : tmp_networkGraph.getGraph().getEachEdge()) {
+            for (Iterator it = this.active_paths.values().iterator(); it.hasNext();) {
+                LinkedList<NodeAddress> path = (LinkedList<NodeAddress>) it.next();
+
+                NodeAddress n0 = null;
+                NodeAddress n1 = null;
+                NodeAddress nb4 =null;
+                for (Iterator itp = path.iterator(); itp.hasNext();) {
+                    if(n0==null)
+                        n0 = (NodeAddress) itp.next();
+                    else 
+                        n0 = n1;
+                    if(itp.hasNext()){
+                        n1 = (NodeAddress) itp.next();
+                        nb4 = n0;
+                    } else {
+                        n1 = nb4;
+                        //break;
+                    }
+                    if((e.getNode0().getId().equals("1." +n0.toString()) || (e.getNode0().getId().equals("1." +n1.toString()))) &&  
+                       (e.getNode1().getId().equals("1." +n0.toString()) || (e.getNode1().getId().equals("1." +n1.toString())))){
+                        System.out.println("ACHEI EDGE  " + e.getNode0() + " " + e.getNode1() + "NO CAMINHO " + path);
+                        if (e.getAttribute("Battery") != null) {
+                            e.setAttribute("Battery", (Integer) e.getAttribute("Battery") * 2);
+                        }
+                    }
+                } 
+            }
+        }
+        
+        
         String destination = data.getNetId() + "." + data.getDst();
         String source = data.getNetId() + "." + data.getSrc();
 
