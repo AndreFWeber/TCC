@@ -173,7 +173,7 @@ public abstract class AbstractMote extends AbstractApplicationMote {
     public void receivedPacket(RadioPacket p) {
         byte[] packetData = p.getPacketData();
         NetworkPacket np = new NetworkPacket(packetData);
-		//log("receivedPacket from: " + np.getSrc()  );
+
         if (np.getDst().isBroadcast()
                 || np.getNxhop().equals(addr)
                 || acceptedId.contains(np.getNxhop())) {
@@ -344,11 +344,11 @@ public abstract class AbstractMote extends AbstractApplicationMote {
                     break;
                 case SDN_WISE_CNF_ID_CNT_BEACON_MAX:
                     cnt_beacon_max = value;
-					SDN_WISE_NEW_CNT_BEACON_MAX = value;
+		    SDN_WISE_NEW_CNT_BEACON_MAX = value;
                     break;
                 case SDN_WISE_CNF_ID_CNT_REPORT_MAX:
                     cnt_report_max = value;
-					SDN_WISE_NEW_CNT_REPORT_MAX = value;
+		    SDN_WISE_NEW_CNT_REPORT_MAX = value;
                     break;
                 case SDN_WISE_CNF_ID_CNT_UPDTABLE_MAX:
                     cnt_updtable_max = value;
@@ -536,7 +536,7 @@ public abstract class AbstractMote extends AbstractApplicationMote {
                         cnt_beacon_max = SDN_WISE_DFLT_CNT_BEACON_MAX*2;
 
 				}
-				log(" @@@@ENVIA REPORT " + pathActive + " " + cntReportSent + " " + cnt_report_max);
+		log(" @@@@ENVIA REPORT " + pathActive + " " + cntReportSent + " " + cnt_report_max);
                 controllerTX(prepareReport());
             }
 
@@ -546,12 +546,12 @@ public abstract class AbstractMote extends AbstractApplicationMote {
             }
 
 			
-			if(sourceMote && (cntReport%2==0)){
-					NodeAddress a = getActualSinkAddress();
-					if(a!=null){
+	    if(sourceMote && (cntReport%2==0)){
+	    	NodeAddress a = getActualSinkAddress();
+		if(a!=null){
                     DataPacket p = new DataPacket(1,addr, a);
             	
-				    int i;
+		    int i;
 				    String payload="";
 				    for(i=0;i<sourceDataSize;i++)
 				    	payload += "d";

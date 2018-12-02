@@ -40,17 +40,15 @@ import org.graphstream.graph.Node;
 import org.graphstream.graph.Path;
 
 /**
- * This class implements the Controller class using the Dijkstra routing
- * algorithm in order to find the shortest path between nodes. When a request
- * from the network is sent, this class sends a SDN_WISE_OPEN_PATH message with
- * the shortest path. No action is taken if the topology of the network changes.
- *
- * @author Sebastiano Milardo
- * @version 0.1
+ * Esta classe foi criada para implementar os algoritmos de caminhos disjuntos e recompensas negativas 
+ * 
+ * baseado no trabalho de Sebastiano Milardo
+ * 
+ * @author Andre Felippe Weber
  */
 public class ControllerTCC extends Controller {
 
-    private final boolean DEBUG_PRINT = true;
+    private final boolean DEBUG_PRINT = false;
     private final Dijkstra dijkstra;
     private String lastSource = "";
     private long lastModification = -1;
@@ -441,8 +439,6 @@ public class ControllerTCC extends Controller {
         if(pathCheckerOn)
            return;
         pathCheckerOn=true;
-
-        System.out.println("\n\nINIT TIMER\n\n");
         
         timer = new Timer("MyTimer");//create a new Timer
         TimerTask timerTask = new TimerTask() {
@@ -521,7 +517,6 @@ public class ControllerTCC extends Controller {
                     }
                     if((e.getNode0().getId().equals("1." +n0.toString()) || (e.getNode0().getId().equals("1." +n1.toString()))) &&  
                        (e.getNode1().getId().equals("1." +n0.toString()) || (e.getNode1().getId().equals("1." +n1.toString())))){
-                        System.out.println("ACHEI EDGE  " + e.getNode0() + " " + e.getNode1() + "NO CAMINHO " + path);
                         if (e.getAttribute("Battery") != null) {
                             e.setAttribute("Battery", (Integer) e.getAttribute("Battery") * 2);
                         }
@@ -558,7 +553,7 @@ public class ControllerTCC extends Controller {
                 }
                 if(path.size()>0){                    
                     if (!pathVector.contains(path) && negative_path_found++<10) {
-                        System.out.println("[CTRL]: " + path + " WEIGHT: "+ dijkstra.getPathLength(tmp_networkGraph.getNode(destination)) );
+                       // System.out.println("[CTRL]: " + path + " WEIGHT: "+ dijkstra.getPathLength(tmp_networkGraph.getNode(destination)) );
                         int index = -1;
                         for (NodeAddress naddress : path) {
                             index++;

@@ -99,7 +99,6 @@ public class ControllerDijkstra extends Controller {
                 if (path.size() > 1) {
                     if(active_paths.get(data.getDst()) != null){
                         if(active_paths.get(data.getDst()).toString().equals(path.toString())){
-                            System.out.println("Mantem o caminho em uso...");
                             return;
                         }
                         clearFlowtable((byte)data.getNetId(), data.getDst());
@@ -129,13 +128,11 @@ public class ControllerDijkstra extends Controller {
            return;
         pathCheckerOn=true;
 
-        System.out.println("\n\nINIT TIMER\n\n");
         
         timer = new Timer("MyTimer");//create a new Timer
         TimerTask timerTask = new TimerTask() {
             @Override
             public void run() {
-                System.out.println("\n\n\nCHECK PATH " + active_paths.toString());
                 Map<NodeAddress, LinkedList<NodeAddress> > paths = new HashMap<NodeAddress, LinkedList<NodeAddress> >();
                 for (Iterator it = active_paths.keySet().iterator(); it.hasNext();) {
                     NodeAddress index = (NodeAddress)it.next();
@@ -173,7 +170,6 @@ public class ControllerDijkstra extends Controller {
         if(active_paths.isEmpty())
             System.out.println("Active Path is empty");
         else {
-            System.out.println("sendClearFlowtable - " + addr.toString() + " clear " + active_paths.get(addr).toString());
   //          timer.cancel();
 //            pathCheckerOn=false;
             //sendClearFlowtable((byte) data.getNetId(), data.getSrc(), active_paths.get(data.getSrc()));
@@ -181,7 +177,6 @@ public class ControllerDijkstra extends Controller {
             try {
                 Thread.sleep(500);
             } catch (InterruptedException ex) {
-                System.out.println("\nThread.sleep\n");
             }
         }
     }

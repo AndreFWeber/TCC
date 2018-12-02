@@ -219,7 +219,7 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
                     
                     if(next.equals(pkt.getSrc().toString())){
                         sendSourceConfig(data.getNetId(), pkt.getSrc(), distribution_source, data_bytes);
-                        System.out.println("SEND TO "+ next);
+                        //System.out.println("SEND TO "+ next);
                     }
                 }
                 /*
@@ -376,9 +376,16 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
         sendNetworkPacket(op);
     }
 
-
+   /*   sendClearFlowtable - Utilizado para enviar ClearPath para os pertencentes ao caminho especificado no @param path.
+    *
+    *   @param netId Identificador da rede.
+    *   @param destination endereco do destinatario. Sink da rede que integra o @param path.
+    *   @param path Lista com todos os modulos que integram o caminho a ser desfeito.
+    *   @return void
+    */
     public final void sendClearFlowtable(byte netId, NodeAddress destination,
             List<NodeAddress> path) {
+                //Como o pacote segue o mesmo padrao do OpenPath, o codigo foi reutilizado. Porem o tipo do pacote foi modificado para 13.
         OpenPathPacket op = new OpenPathPacket(netId, sinkAddress, destination);
         op.setPath(path)
           .setNxhop(sinkAddress)
@@ -387,6 +394,13 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
         sendNetworkPacket(op);
     }
     
+   /*   sendSourceConfig - Utilizado para enviar SOURCE_SETUP para o modulo source.
+    *   @param netId Identificador da rede.
+    *   @param destination endereco do destinatario. Modulo a ser configurado como source.
+    *   @param distribution Perfil de geracao.
+    *   @param dataSize Tamanho do pacote a ser gerado pelo source.
+    *   @return void
+    */
     public final void sendSourceConfig(int netId, NodeAddress destination, String distribution, int dataSize) {
             byte d = 0;
             ConfigPacket cp = new ConfigPacket(netId, sinkAddress, destination);

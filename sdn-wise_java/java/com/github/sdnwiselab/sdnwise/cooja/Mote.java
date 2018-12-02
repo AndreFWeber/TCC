@@ -101,6 +101,9 @@ public class Mote extends AbstractMote {
 
                 setDistanceFromSink(bp.getDist() + 1);
                 setRssiSink(rssi);
+
+		log("\n\n\n\n SETTING DISTANCE FROM SINK: "+ bp.getDist() + 1  +" \n\n\n");
+
             } else if ((bp.getDist() + 1) == this.getDistanceFromSink()
                     && getNextHopVsSink().equals(bp.getSrc())) {
                 flowTable.get(0).getStats().restoreTtl();
