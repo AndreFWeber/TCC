@@ -187,8 +187,9 @@ public abstract class Controller implements Observer, Runnable, ControllerInterf
                 this.nodesBattery.put(pkt.getSrc(), pkt.getBatt());
                 //System.out.println("BATERIA:::: " + pkt.getSrc() + " " + pkt.getBatt());
                 writeBattery2File();
-                        
-                this.WEIGHT_ATTRIBUTE.put(pkt.getNetId()+"."+pkt.getSrc().toString(), 255-pkt.getBatt());
+
+                this.WEIGHT_ATTRIBUTE.put(pkt.getNetId()+"."+pkt.getSrc().toString(), (255-pkt.getBatt()));
+
                 networkGraph.extraAttributesHandler("Battery", this.WEIGHT_ATTRIBUTE);
 
                 networkGraph.updateMap(pkt, -1);

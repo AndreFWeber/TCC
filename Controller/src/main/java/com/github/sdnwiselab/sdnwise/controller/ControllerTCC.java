@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Observable;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
@@ -66,7 +67,7 @@ public class ControllerTCC extends Controller {
     um dos modulo. 
         NegativeRewardType = true -> balanceia os caminhos. i.e: Utiliza sempre o caminho com menor custo (Melhor nivel energetico)
     */
-    private boolean NegativeRewardType = false; 
+    private boolean NegativeRewardType = true; 
             
     /*
      * Constructor method fo ControllerDijkstra.
@@ -94,6 +95,12 @@ public class ControllerTCC extends Controller {
 
     }
 
+        @Override
+    public void update(Observable o, Object arg) {
+        super.update(o, arg);
+
+    }
+    
     @Override
     public final void manageRoutingRequest(NetworkPacket data) {
 
@@ -480,18 +487,50 @@ public class ControllerTCC extends Controller {
                 }
             }
         };
-        timer.scheduleAtFixedRate(timerTask, 20000, 20000);//this line starts the timer at the same time its executed
+        timer.scheduleAtFixedRate(timerTask, CHECK_INTERVAL, CHECK_INTERVAL);//this line starts the timer at the same time its executed
     }
     
     @Override
     public void setupNetwork() {
     }
 
+    private int negative_path_found = 0;
     @Override
     public void TCC_manageRoutingRequest_Negative_Reward(NetworkPacket data, NetworkGraph _networkGraph, boolean SendDataBack) {
         NetworkGraph tmp_networkGraph = new NetworkGraph(_networkGraph.getTimeout(), _networkGraph.getRssiResolution());
         tmp_networkGraph.copy(_networkGraph);
 
+        for (Edge e : tmp_networkGraph.getGraph().getEachEdge()) {
+            for (Iterator it = this.active_paths.values().iterator(); it.hasNext();) {
+                LinkedList<NodeAddress> path = (LinkedList<NodeAddress>) it.next();
+
+                NodeAddress n0 = null;
+                NodeAddress n1 = null;
+                NodeAddress nb4 =null;
+                for (Iterator itp = path.iterator(); itp.hasNext();) {
+                    if(n0==null)
+                        n0 = (NodeAddress) itp.next();
+                    else 
+                        n0 = n1;
+                    if(itp.hasNext()){
+                        n1 = (NodeAddress) itp.next();
+                        nb4 = n0;
+                    } else {
+                        n1 = nb4;
+                        //break;
+                    }
+                    if((e.getNode0().getId().equals("1." +n0.toString()) || (e.getNode0().getId().equals("1." +n1.toString()))) &&  
+                       (e.getNode1().getId().equals("1." +n0.toString()) || (e.getNode1().getId().equals("1." +n1.toString())))){
+                        System.out.println("ACHEI EDGE  " + e.getNode0() + " " + e.getNode1() + "NO CAMINHO " + path);
+                        if (e.getAttribute("Battery") != null) {
+                            e.setAttribute("Battery", (Integer) e.getAttribute("Battery") * 2);
+                        }
+                    }
+                } 
+            }
+        }
+        
+        
         String destination = data.getNetId() + "." + data.getDst();
         String source = data.getNetId() + "." + data.getSrc();
 
@@ -518,7 +557,7 @@ public class ControllerTCC extends Controller {
                     //Map<String, Integer> nBatteryWeight = new HashMap<String, Integer>();
                 }
                 if(path.size()>0){                    
-                    if (!pathVector.contains(path)) {
+                    if (!pathVector.contains(path) && negative_path_found++<10) {
                         System.out.println("[CTRL]: " + path + " WEIGHT: "+ dijkstra.getPathLength(tmp_networkGraph.getNode(destination)) );
                         int index = -1;
                         for (NodeAddress naddress : path) {
@@ -551,6 +590,7 @@ public class ControllerTCC extends Controller {
                         TCC_manageRoutingRequest_Negative_Reward(data, tmp_networkGraph, SendDataBack);
                     } else {                        
                         System.out.println("FIM____________________________________ FROM:" + source + " To: " + destination + " ");
+                        negative_path_found=0;
                         //pathVector.clear();
 
                         /*
